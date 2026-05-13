@@ -41,10 +41,54 @@ def macro(
     console.print(text)
 
 
-@app.command()
-def ashare():
-    """A股板块扫描与个股分析"""
-    console.print("[green]🇨🇳 ashare 模块开发中[/green]")
+ashare_app = typer.Typer(help="A股板块扫描与个股分析")
+app.add_typer(ashare_app, name="ashare")
+
+
+@ashare_app.command(name="track")
+def ashare_track(
+    days: int = typer.Option(10, "--days", "-d", help="回溯交易日数"),
+    custom: str = typer.Option(None, "--custom", help='JSON自定义标的: {"sz.000063": {"name":"中兴通讯","entry":38.09,"stop":36.50,"target1":39.50}}'),
+):
+    """跟踪持仓标的：止损止盈检查 + 量价预警"""
+    from finlab.ashare.tracker import TrackConfig, track_stocks, print_summary
+
+    if custom:
+        import json
+        raw = json.loads(custom)
+        configs = [
+            TrackConfig(code=code, name=info["name"], entry=info.get("entry", 0),
+                        stop=info.get("stop", 0), target1=info.get("target1", 0))
+            for code, info in raw.items()
+        ]
+    else:
+        configs = [
+            TrackConfig("sz.000063", "中兴通讯", entry=38.09, stop=36.50, target1=39.50),
+            TrackConfig("sh.600547", "山东黄金", entry=34.83, stop=33.50, target1=36.50),
+            TrackConfig("sh.600150", "中国船舶", entry=40.50, stop=38.50, target1=43.00),
+        ]
+
+    with console.status("[bold green]🇨🇳 拉取A股数据..."):
+        results = track_stocks(configs, days=days)
+
+    if results:
+        print_summary(results)
+
+
+@ashare_app.command(name="scan")
+def ashare_scan(
+    exclude: str = typer.Option(None, "--exclude", help="排除板块（逗号分隔）"),
+):
+    """板块扫描：寻找滞涨标的"""
+    from finlab.ashare.screener import scan_sectors, print_sector_scan
+
+    exclude_list = [e.strip() for e in exclude.split(",")] if exclude else []
+
+    with console.status("[bold green]🇨🇳 扫描A股板块..."):
+        results = scan_sectors(exclude=exclude_list)
+
+    if results:
+        print_sector_scan(results)
 
 
 @app.command()
