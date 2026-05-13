@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finlab"
+version = "0.1.0"
+description = "开源个人投行研究工具链 — 宏观、A股、加密、研报一站式分析框架"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Ray Wang" },
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+ashare = [
+    "baostock>=0.8.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+]
+crypto = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "yfinance>=0.2.0",
+]
+macro = [
+    "pandas>=2.0.0",
+    "yfinance>=0.2.0",
+]
+report = [
+    "jinja2>=3.0.0",
+    "markdown>=3.5.0",
+]
+all = [
+    "finlab[ashare,crypto,macro,report]",
+]
+
+[project.urls]
+Homepage = "https://github.com/wjy3452801181-a11y/finlab"
+Repository = "https://github.com/wjy3452801181-a11y/finlab"
+
+[project.scripts]
+finlab = "finlab.cli:app"
+
+[tool.hatch.envs.default]
+python = "3.11"
+
+[tool.hatch.envs.default.scripts]
+test = "pytest tests/"
+lint = "ruff check finlab/"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
