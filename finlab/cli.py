@@ -25,9 +25,20 @@ def version():
 
 
 @app.command()
-def macro():
+def macro(
+    country: str = typer.Option("us", "--country", "-c", help="国家代码 (us, cn, jp, etc.)"),
+    days: int = typer.Option(2, "--days", "-d", help="向前看几天"),
+    summary: bool = typer.Option(False, "--summary", "-s", help="精简模式（适合推送）"),
+):
     """宏观数据拉取与评分"""
-    console.print("[yellow]📊 macro 模块开发中[/yellow]")
+    from finlab.macro.report import generate_macro_report, generate_macro_summary
+
+    with console.status("[bold yellow]📊 抓取宏观数据..."):
+        if summary:
+            text = generate_macro_summary(country=country)
+        else:
+            text = generate_macro_report(country=country, days_ahead=days)
+    console.print(text)
 
 
 @app.command()
