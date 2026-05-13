@@ -105,7 +105,12 @@ ruff check finlab/
 
 ## 贡献
 
-欢迎 PR！不管是修 bug、加数据源、写文档，还是吐槽命名不好听。
+欢迎反馈！不管是 bug、feature request、文档建议、还是吐槽命名不好听。
+
+- **提 Issue** — [github.com/wjy3452801181-a11y/finlab/issues](https://github.com/wjy3452801181-a11y/finlab/issues)
+- **PR** — 直接 fork 改，提 PR 即可
+
+关于数据源接入、新模块想法、技术讨论，也欢迎来 Issues 聊。
 
 ---
 
