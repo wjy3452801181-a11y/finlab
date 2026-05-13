@@ -41,6 +41,7 @@ def macro(
     console.print(text)
 
 
+# ── ashare ──────────────────────────────────────────────
 ashare_app = typer.Typer(help="A股板块扫描与个股分析")
 app.add_typer(ashare_app, name="ashare")
 
@@ -91,22 +92,49 @@ def ashare_scan(
         print_sector_scan(results)
 
 
-@app.command()
-def crypto():
-    """加密市场多因子分析"""
-    console.print("[blue]₿ crypto 模块开发中[/blue]")
+# ── news ────────────────────────────────────────────────
+news_app = typer.Typer(help="实时快讯与事件分析")
+app.add_typer(news_app, name="news")
 
 
-@app.command()
-def news():
-    """实时快讯与事件分析"""
-    console.print("[magenta]📰 news 模块开发中[/magenta]")
+@news_app.command(name="flash")
+def news_flash(hours: int = typer.Option(1, "--hours", "-h", help="最近几小时")):
+    """获取金十实时快讯"""
+    console.print("[magenta]📰 news flash — TODO: 接入金十MCP[/magenta]")
 
 
-@app.command()
-def report():
-    """一键生成研报"""
-    console.print("[cyan]📄 report 模块开发中[/cyan]")
+@news_app.command(name="analyze")
+def news_analyze(title: str = typer.Argument(..., help="事件标题")):
+    """分析金融事件影响"""
+    console.print("[magenta]📰 news analyze — TODO: 调用事件分析框架[/magenta]")
+
+
+@news_app.command(name="brief")
+def news_brief():
+    """生成当前时段新闻简报"""
+    console.print("[magenta]📰 news brief — TODO: 简报生成[/magenta]")
+
+
+# ── crypto ──────────────────────────────────────────────
+crypto_app = typer.Typer(help="加密市场多因子分析")
+app.add_typer(crypto_app, name="crypto")
+
+
+@crypto_app.command(name="quote")
+def crypto_quote():
+    """BTC实时行情"""
+    console.print("[blue]₿ crypto — TODO: OKX行情接入[/blue]")
+
+
+# ── report ──────────────────────────────────────────────
+report_app = typer.Typer(help="一键生成研报")
+app.add_typer(report_app, name="report")
+
+
+@report_app.command(name="generate")
+def report_generate():
+    """生成研报并保存到Obsidian"""
+    console.print("[cyan]📄 report — TODO: 研报生成[/cyan]")
 
 
 if __name__ == "__main__":
