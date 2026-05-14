@@ -1,34 +1,39 @@
 # FinLab
 
-> **你的开源个人投行研究室** — 宏观、A股、加密、新闻、研报一站式分析工具链。
+> **Your Open-Source Personal Investment Research Lab** — Macro, A-Shares, Crypto, News & Reports — all in one CLI toolchain.
 >
+> One person, one research department. Three roles, one framework.
+>
+> **你的开源个人投行研究室** — 宏观、A股、加密、新闻、研报一站式分析工具链。
 > 一个人就是一个研究部门。三个角色，一套框架。
 
 ---
 
-## 背景
+## 背景 / Background
 
-FinLab 源于一个真实需求：个人交易者需要像投行研究部一样系统化地分析市场，但 Bloomberg Terminal 太贵、Excel 太散、普通工具又不够深。
+**中文：** FinLab 源于一个真实需求：个人交易者需要像投行研究部一样系统化地分析市场，但 Bloomberg Terminal 太贵、Excel 太散、普通工具又不够深。于是我们把一套跑通了半年多的个人研究框架开源出来。
 
-于是我们把一套跑通了半年多的个人研究框架开源出来。
+**English:** FinLab was born from a real need: individual traders need systematic market analysis like an investment bank's research department — but Bloomberg Terminal is too expensive, Excel is too fragmented, and off-the-shelf tools aren't deep enough. So we open-sourced a personal research framework that has been running in production for over six months.
 
-### 三角色研究框架
+### 三角色研究框架 / Three-role Research Framework
 
-- **宏观总监** — 看全球大局、利率、美元、大类资产
-- **行业首席** — 切行业赛道、A股港股、板块轮动
-- **交易执行官** — 算入场时机、止损、反共识机会
+| Role | Focus |
+|------|-------|
+| **宏观总监 / Macro Director** (GS+UBS+Citi) | Global macro, rates, USD, asset allocation |
+| **行业首席 / Sector Chief** (MS+CICC+NRI) | Sector rotation, China assets, Asian FX |
+| **交易执行官 / Trade Executor** (JPM+Bernstein+BofA) | Entry timing, stop-loss, contrarian alpha |
 
 ---
 
-## 快速开始
+## 快速开始 / Quick Start
 
 ```bash
 pip install finlab
 
-# 查看可用命令
+# 查看可用命令 / See available commands
 finlab --help
 
-# 模块预览（当前开发中）
+# 模块预览 / Preview modules
 finlab macro
 finlab ashare
 finlab crypto
@@ -38,82 +43,92 @@ finlab report
 
 ---
 
-## 模块
+## 模块 / Modules
 
-| 模块 | 功能 | 状态 |
-|------|------|------|
-| `finlab macro` | 宏观数据拉取 + 评分系统（PPI/CPI/NFP等） | 🔧 开发中 |
-| `finlab ashare` | A股板块扫描 + 个股筛选 + 趋势判断 | 🔧 开发中 |
-| `finlab crypto` | BTC多因子分析 + 回测框架 | 🔧 开发中 |
-| `finlab news` | 实时快讯 + 金融事件分析 | 🔧 开发中 |
-| `finlab report` | 一键生成研报（Markdown/HTML） | 🔧 开发中 |
+| Module | Functionality | Status |
+|--------|--------------|--------|
+| `finlab macro` | Macro data fetching + scoring system (PPI/CPI/NFP/Unemployment) | 🔧 开发中 / In Development |
+| `finlab ashare` | A-share sector scan + stock screening + trend analysis | 🔧 开发中 / In Development |
+| `finlab crypto` | BTC multi-factor analysis + backtesting framework | 🔧 开发中 / In Development |
+| `finlab news` | Real-time flash news + financial event analysis | 🔧 开发中 / In Development |
+| `finlab report` | One-click report generation (Markdown/HTML) | 🔧 开发中 / In Development |
+
+### 评分体系 / Scoring System
+
+| Score | Label |
+|-------|-------|
+| 8-10 | 🚀 Strongly Bullish / 强烈利多 |
+| 6-7 | ✅ Bullish / 利好 |
+| 4-5 | ⚖️ Neutral / 中性 |
+| 2-3 | 🔴 Bearish / 利空 |
+| 1 | ⚠️ Strongly Bearish / 强烈利空 |
+
+### 报告四层结构 / Four-Layer Report Structure
+
+1. **Data Update / 数据更新** — Core indicators, charts, anomalies
+2. **Policy & News / 政策与新闻** — Layered: macro → industry → company
+3. **Thematic Analysis / 专题分析** — Event → cause → transmission → forecast
+4. **Investment View / 投资观点** — Specific picks + risk warnings
 
 ---
 
-## 数据源
+## 架构 / Architecture
 
-FinLab 采用插件化数据源架构，支持：
+```
+finlab/
+├── finlab/
+│   ├── cli.py          # Typer CLI 入口 / Entry point
+│   ├── core/           # 数据模型 + 数据源抽象层
+│   │   ├── models.py   # Dataclasses (MacroEvent, AShareSignal, etc.)
+│   │   └── sources.py  # DataSource ABC + 插件化
+│   ├── macro/          # 宏观模块 / Macro module
+│   ├── ashare/         # A股模块 / A-share module
+│   ├── crypto/         # 加密模块 / Crypto module
+│   ├── news/           # 新闻模块 / News module
+│   └── report/         # 研报模块 / Report module
+├── tests/
+├── data/
+└── docs/
+```
 
-| 数据源 | 类型 | 覆盖范围 |
+### 数据源 / Data Sources
+
+| Source | Type | Coverage |
 |--------|------|----------|
-| Baostock | A股历史行情 | 日线/分钟线 |
-| yfinance | 全球行情 | 美股/加密/外汇/商品 |
-| Jin10 (MCP) | 实时快讯+财经日历 | 宏观数据/突发事件 |
-| 金十数据 | 行情快照 | 指数/商品/外汇/加密 |
-| OKX | 加密市场深度 | BTC/ETH现货与合约 |
+| Baostock | A-share historical | Daily/minute kline |
+| yfinance | Global market | US stocks, crypto, FX, commodities |
+| Jin10 (MCP) | Real-time flash + calendar | Macro data, breaking events |
+| 金十数据 / Jin10 Markets | Market snapshot | Indices, commodities, FX |
 
 ---
 
-## 数据模型
-
-### 宏观事件评分
-
-```
-评分 8-10 🚀 强烈利多
-评分 6-7  ✅ 利好
-评分 4-5  ⚖️ 中性
-评分 2-3  🔴 利空
-评分 1    ⚠️ 强烈利空
-```
-
-### 分析报告结构
-
-所有研究报告遵循统一四层结构：
-
-1. **数据更新** — 核心指标、图表、异常标注
-2. **政策与新闻** — 分层梳理（宏观→行业→公司）
-3. **专题分析** — 事件→原因→传导→预判
-4. **投资观点** — 具体标的建议 + 风险提示
-
----
-
-## 开发
+## 开发 / Development
 
 ```bash
 git clone https://github.com/wjy3452801181-a11y/finlab.git
 cd finlab
 pip install -e ".[all]"
 
-# 运行测试
+# 运行测试 / Run tests
 pytest tests/
 
-# 代码检查
+# 代码检查 / Lint
 ruff check finlab/
 ```
 
 ---
 
-## 贡献
+## 贡献 / Contributing
 
-欢迎反馈！不管是 bug、feature request、文档建议、还是吐槽命名不好听。
+Feedback is welcome — bugs, feature requests, documentation improvements, or naming complaints.
 
-- **提 Issue** — [github.com/wjy3452801181-a11y/finlab/issues](https://github.com/wjy3452801181-a11y/finlab/issues)
-- **PR** — 直接 fork 改，提 PR 即可
+- **提 Issue / Open an Issue** — [github.com/wjy3452801181-a11y/finlab/issues](https://github.com/wjy3452801181-a11y/finlab/issues)
+- **PR** — Fork, code, and submit a PR
 
-关于数据源接入、新模块想法、技术讨论，也欢迎来 Issues 聊。
+Discussions about data source integrations, new modules, or technical architecture are also welcome in Issues.
 
 ---
 
-## 许可
+## 许可 / License
 
-MIT
+MIT © 2026 [ray wang](https://github.com/wjy3452801181-a11y)
