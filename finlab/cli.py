@@ -25,6 +25,71 @@ def version():
 
 
 @app.command()
+def about():
+    """显示项目简介：版本、数据源、架构、评分体系"""
+    from finlab import __version__
+    from rich.panel import Panel
+    from rich.table import Table
+
+    console.print(f"[bold cyan]finlab v{__version__}[/bold cyan] — [bold]你的开源投行研究室[/bold]")
+    console.print()
+
+    console.print("[bold]三角色研究框架 / Three-role Research Framework[/bold]")
+    roles = Table(show_header=True, header_style="bold")
+    roles.add_column("角色", width=14)
+    roles.add_column("对标投行", width=18)
+    roles.add_column("负责", width=50)
+    roles.add_row("宏观总监", "高盛 + 瑞银 + 花旗", "全球宏观、利率、美元、大类资产配置")
+    roles.add_row("行业首席", "摩根士丹利 + 中金 + 野村", "行业赛道、A股港股、板块轮动")
+    roles.add_row("交易执行官", "摩根大通 + 伯恩斯坦 + 美银", "入场时机、止损止盈、反共识Alpha")
+    console.print(roles)
+    console.print()
+
+    console.print("[bold]数据源 / Data Sources[/bold]")
+    sources = Table(show_header=True, header_style="bold")
+    sources.add_column("数据源", width=16)
+    sources.add_column("类型", width=16)
+    sources.add_column("覆盖范围", width=50)
+    sources.add_row("Baostock", "A股历史行情", "日线/分钟线")
+    sources.add_row("yfinance", "全球行情", "美股/加密/外汇/商品")
+    sources.add_row("Jin10 (MCP)", "实时快讯+财经日历", "宏观数据/突发事件")
+    sources.add_row("金十数据", "行情快照", "指数/商品/外汇")
+    console.print(sources)
+    console.print()
+
+    console.print("[bold]评分体系 / Scoring System[/bold]")
+    scores = Table(show_header=True, header_style="bold")
+    scores.add_column("评分", width=8, justify="center")
+    scores.add_column("含义")
+    scores.add_row("8-10", "🚀 Strongly Bullish / 强烈利多")
+    scores.add_row("6-7", "✅ Bullish / 利好")
+    scores.add_row("4-5", "⚖️ Neutral / 中性")
+    scores.add_row("2-3", "🔴 Bearish / 利空")
+    scores.add_row("1", "⚠️ Strongly Bearish / 强烈利空")
+    console.print(scores)
+    console.print()
+
+    console.print("[bold]架构 / Architecture[/bold]")
+    arch = Panel(
+        "finlab/\n"
+        "├── finlab/\n"
+        "│   ├── cli.py           CLI 入口\n"
+        "│   ├── core/            数据模型 + 数据源抽象层\n"
+        "│   ├── macro/           宏观模块\n"
+        "│   ├── ashare/          A股模块\n"
+        "│   ├── crypto/          加密模块\n"
+        "│   ├── news/            新闻模块\n"
+        "│   └── report/          研报模块\n"
+        "├── tests/\n"
+        "├── data/\n"
+        "└── docs/",
+        title="Project Structure",
+        border_style="dim"
+    )
+    console.print(arch)
+
+
+@app.command()
 def macro(
     country: str = typer.Option("us", "--country", "-c", help="国家代码 (us, cn, jp, etc.)"),
     days: int = typer.Option(2, "--days", "-d", help="向前看几天"),
