@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finlab"
-version = "0.1.0"
+version = "0.2.0"
 description = "开源个人投行研究工具链 — 宏观、A股、加密、研报一站式分析框架"
 readme = "README.md"
 license = { text = "MIT" }
@@ -40,7 +40,7 @@ report = [
     "markdown>=3.5.0",
 ]
 all = [
-    "finlab[ashare,crypto,macro,report]",
+    "finlab[ashare,macro,report]",
 ]
 
 [project.urls]

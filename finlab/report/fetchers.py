@@ -1,0 +1,147 @@
+"""研报模块 — 数据获取（Yahoo Finance + 金十MCP行情）"""
+
+from datetime import datetime, timedelta, timezone, date
+from typing import Optional
+
+BJT = timezone(timedelta(hours=8))
+
+# 研报默认覆盖的标的分组 (Yahoo Finance tickers)
+TICKER_GROUPS: dict[str, list[str]] = {
+    "大盘指数ETF": ["SPY", "QQQ"],
+    "美股行业ETF": ["XLK", "XLE", "XLF", "XLI", "XLV", "XLY", "XLI", "XLU", "XLB"],
+    "科技AI": ["NVDA", "GOOGL", "MSFT", "AMD", "INTC", "SMH"],
+    "大宗商品": ["GLD", "USO", "SLV"],
+    "债券/外汇": ["TLT", "UUP"],
+    "中国": ["FXI", "KWEB"],
+    "加密": ["BTC-USD", "ETH-USD"],
+}
+
+
+def fetch_yfinance_batch(
+    tickers: list[str],
+    start: date,
+    end: date,
+    timeout: int = 30,
+) -> dict[str, dict]:
+    """批量获取 Yahoo Finance 历史行情
+
+    Args:
+        tickers: 标的列表
+        start: 开始日期
+        end: 结束日期
+        timeout: 超时秒数
+
+    Returns:
+        {ticker: {date: {open, high, low, close, volume}}}
+    """
+    import yfinance as yf
+
+    results = {}
+    for ticker in tickers:
+        try:
+            t = yf.Ticker(ticker)
+            hist = t.history(start=start, end=end, auto_adjust=True, timeout=timeout)
+            if hist.empty:
+                continue
+
+            data = {}
+            for idx, row in hist.iterrows():
+                ds = idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx.date())
+                data[ds] = {
+                    "open": round(float(row["Open"]), 2),
+                    "high": round(float(row["High"]), 2),
+                    "low": round(float(row["Low"]), 2),
+                    "close": round(float(row["Close"]), 2),
+                    "volume": int(row["Volume"]),
+                }
+            results[ticker] = data
+        except Exception as e:
+            continue
+    return results
+
+
+def calc_weekly_change(data: dict[str, dict]) -> Optional[float]:
+    """计算周涨跌幅(百分比)
+
+    Args:
+        data: {date_str: {close: float, ...}}
+
+    Returns:
+        百分比涨跌幅，无数据返回 None
+    """
+    dates = sorted(data.keys())
+    if len(dates) < 2:
+        return None
+    first_close = data[dates[0]]["close"]
+    last_close = data[dates[-1]]["close"]
+    if first_close == 0:
+        return None
+    return round((last_close - first_close) / first_close * 100, 2)
+
+
+def fetch_report_quotes() -> dict[str, Optional[float]]:
+    """获取当前行情快照（通过金十MCP）
+
+    Returns:
+        {品种代码: 最新价}
+    """
+    import sys
+    import os
+    _p = os.path.expanduser("~/.hermes/scripts")
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+    from jin10_mcp_client import Jin10MCP
+
+    client = Jin10MCP()
+    client.initialize()
+
+    codes = {
+        "上证": "000001",
+        "深证": "399001",
+        "创业板": "399006",
+        "黄金": "XAUUSD",
+        "原油": "USOIL",
+        "欧元": "EURUSD",
+        "美元指数": "USDX",
+    }
+    result = {}
+    for name, code in codes.items():
+        try:
+            q = client.get_quote(code)
+            if q:
+                result[name] = float(q.get("close", 0))
+            else:
+                result[name] = None
+        except Exception:
+            result[name] = None
+    return result
+
+
+def default_date_range() -> tuple[date, date]:
+    """返回默认研报周期：最近7天"""
+    today = datetime.now(BJT).date()
+    return today - timedelta(days=7), today
+
+
+def format_yfinance_table(
+    results: dict[str, dict],
+    group_key: str = "",
+) -> str:
+    """将 yfinance 数据格式化为表格字符串"""
+    lines = []
+    if group_key:
+        lines.append(f"### {group_key}")
+    lines.append(f"| {'标的':<12} | {'周涨跌幅':<12} | {'最新价':<12} | {'最高':<12} | {'最低':<12} |")
+    lines.append(f"|{'-'*14}|{'-'*14}|{'-'*14}|{'-'*14}|{'-'*14}|")
+
+    for ticker, data in results.items():
+        change = calc_weekly_change(data)
+        dates = sorted(data.keys())
+        last_close = data[dates[-1]]["close"] if dates else "-"
+        high = max(d["high"] for d in data.values()) if data else "-"
+        low = min(d["low"] for d in data.values()) if data else "-"
+        change_str = f"{change:+.2f}%" if change is not None else "-"
+        lines.append(
+            f"| {ticker:<12} | {change_str:<12} | {last_close:<12} | {high:<12} | {low:<12} |"
+        )
+    return "\n".join(lines)

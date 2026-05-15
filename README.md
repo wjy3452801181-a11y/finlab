@@ -36,7 +36,7 @@ finlab --help
 # 模块预览 / Preview modules
 finlab macro
 finlab ashare
-finlab crypto
+| finlab news
 finlab news
 finlab report
 ```
@@ -47,11 +47,10 @@ finlab report
 
 | Module | Functionality | Status |
 |--------|--------------|--------|
-| `finlab macro` | Macro data fetching + scoring system (PPI/CPI/NFP/Unemployment) | 🔧 开发中 / In Development |
-| `finlab ashare` | A-share sector scan + stock screening + trend analysis | 🔧 开发中 / In Development |
-| `finlab crypto` | BTC multi-factor analysis + backtesting framework | 🔧 开发中 / In Development |
-| `finlab news` | Real-time flash news + financial event analysis | 🔧 开发中 / In Development |
-| `finlab report` | One-click report generation (Markdown/HTML) | 🔧 开发中 / In Development |
+| `finlab macro` | Macro data fetching + scoring system (PPI/CPI/NFP/Unemployment) | ✅ 完成 / Done |
+| `finlab ashare` | A-share sector scan + stock screening + trend analysis | ✅ 完成 / Done |
+| `finlab news` | Real-time flash news + financial event analysis + briefs | ✅ 完成 / Done |
+| `finlab report` | One-click 4-layer weekly report generation → Obsidian | ✅ 完成 / Done |
 
 ### 评分体系 / Scoring System
 
@@ -83,7 +82,6 @@ finlab/
 │   │   └── sources.py  # DataSource ABC + 插件化
 │   ├── macro/          # 宏观模块 / Macro module
 │   ├── ashare/         # A股模块 / A-share module
-│   ├── crypto/         # 加密模块 / Crypto module
 │   ├── news/           # 新闻模块 / News module
 │   └── report/         # 研报模块 / Report module
 ├── tests/

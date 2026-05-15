@@ -163,32 +163,79 @@ app.add_typer(news_app, name="news")
 
 
 @news_app.command(name="flash")
-def news_flash(hours: int = typer.Option(1, "--hours", "-h", help="最近几小时")):
+def news_flash(hours: int = typer.Option(2, "--hours", "-h", help="最近几小时")):
     """获取金十实时快讯"""
-    console.print("[magenta]📰 news flash — TODO: 接入金十MCP[/magenta]")
+    from finlab.news.fetchers import fetch_flash, format_flash_item
+
+    with console.status("[bold yellow]📰 获取快讯..."):
+        items = fetch_flash(hours=hours)
+
+    if not items:
+        console.print(f"[yellow]📭 最近{hours}小时无快讯[/yellow]")
+        return
+
+    console.print(f"[bold]📰 最近{hours}小时快讯 ({len(items)}条)[/bold]")
+    console.print()
+    for item in items:
+        line = format_flash_item(item)
+        console.print(f"  {line[:100]}")
+    console.print()
+    console.print(f"[dim]—— {len(items)}条快讯 ——[/dim]")
 
 
 @news_app.command(name="analyze")
 def news_analyze(title: str = typer.Argument(..., help="事件标题")):
     """分析金融事件影响"""
-    console.print("[magenta]📰 news analyze — TODO: 调用事件分析框架[/magenta]")
+    from finlab.news.analysis import analyze_event
+    from rich.panel import Panel
+
+    with console.status(f"[bold yellow]🔍 分析: {title[:40]}..."):
+        result = analyze_event(title)
+
+    console.print(Panel(result, title_align="left", border_style="cyan"))
 
 
 @news_app.command(name="brief")
 def news_brief():
-    """生成当前时段新闻简报"""
-    console.print("[magenta]📰 news brief — TODO: 简报生成[/magenta]")
+    """生成当前时段新闻简报（表格格式）"""
+    from finlab.news.brief import build_flash_brief
+
+    with console.status("[bold yellow]📰 生成简报..."):
+        text = build_flash_brief()
+
+    console.print(text)
 
 
-# ── crypto ──────────────────────────────────────────────
-crypto_app = typer.Typer(help="加密市场多因子分析")
-app.add_typer(crypto_app, name="crypto")
+@news_app.command(name="search")
+def news_search(keyword: str = typer.Argument(..., help="搜索关键词")):
+    """搜索金十快讯"""
+    from finlab.news.fetchers import search_flash, format_flash_item
+
+    with console.status(f"[bold yellow]🔍 搜索: {keyword}..."):
+        items = search_flash(keyword)
+
+    if not items:
+        console.print(f"[yellow]未找到 \"{keyword}\" 相关快讯[/yellow]")
+        return
+
+    console.print(f"[bold]🔍 \"{keyword}\" 搜索结果 ({len(items)}条)[/bold]")
+    console.print()
+    for item in items[:10]:
+        line = format_flash_item(item)
+        console.print(f"  {line}")
+    if len(items) > 10:
+        console.print(f"\n[dim]... 还有{len(items)-10}条[/dim]")
 
 
-@crypto_app.command(name="quote")
-def crypto_quote():
-    """BTC实时行情"""
-    console.print("[blue]₿ crypto — TODO: OKX行情接入[/blue]")
+@news_app.command(name="calendar")
+def news_calendar():
+    """显示本周财经日历"""
+    from finlab.news.brief import build_calendar_brief
+
+    with console.status("[bold yellow]📅 获取财经日历..."):
+        text = build_calendar_brief()
+
+    console.print(text)
 
 
 # ── report ──────────────────────────────────────────────
@@ -197,9 +244,66 @@ app.add_typer(report_app, name="report")
 
 
 @report_app.command(name="generate")
-def report_generate():
+def report_generate(
+    title: str = typer.Option("", "--title", "-t", help="研报标题"),
+    topic: str = typer.Option("", "--topic", help="专题标题"),
+    desc: str = typer.Option("", "--desc", help="事件描述"),
+    outlook: str = typer.Option("", "--outlook", help="市场展望"),
+    risks: str = typer.Option("", "--risks", help="风险提示"),
+):
     """生成研报并保存到Obsidian"""
-    console.print("[cyan]📄 report — TODO: 研报生成[/cyan]")
+    from finlab.report.generator import generate_report
+
+    with console.status("[bold cyan]📄 生成研报中..."):
+        filepath = generate_report(
+            title=title or "",
+            topic_title=topic or "",
+            topic_desc=desc or "",
+            outlook=outlook or "",
+            risks=risks or "",
+        )
+
+    console.print(f"\n[green]✅ 研报已保存[/green]")
+    console.print(f"[dim]{filepath}[/dim]")
+
+
+@report_app.command(name="quick")
+def report_quick(
+    title: str = typer.Option("", "--title", "-t", help="研报标题"),
+):
+    """快速生成研报（默认最近7天 + 全标的）"""
+    from finlab.report.generator import quick_report
+
+    with console.status("[bold cyan]📄 快速研报生成中..."):
+        filepath = quick_report(title=title or "")
+
+    console.print(f"\n[green]✅ 研报已保存[/green]")
+    console.print(f"[dim]{filepath}[/dim]")
+
+
+@report_app.command(name="data")
+def report_data():
+    """仅生成数据章节（行情表格）"""
+    from finlab.report.fetchers import (
+        fetch_yfinance_batch, fetch_report_quotes,
+        TICKER_GROUPS, default_date_range,
+    )
+    from finlab.report.sections import generate_data_section
+
+    start, end = default_date_range()
+    tickers = []
+    for gt in TICKER_GROUPS.values():
+        tickers.extend(gt)
+
+    with console.status("[bold cyan]📡 拉取行情数据..."):
+        yf_data = fetch_yfinance_batch(tickers, start, end)
+        quotes = fetch_report_quotes()
+
+    text = generate_data_section(
+        yf_data, quotes,
+        start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"),
+    )
+    console.print(text)
 
 
 if __name__ == "__main__":
