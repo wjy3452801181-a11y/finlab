@@ -3,6 +3,7 @@
 组装四大章节 + 行情数据 + 快讯，输出 Markdown 文件并归档到 Obsidian。
 """
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional
@@ -24,6 +25,7 @@ from finlab.report.sections import (
     generate_investment_section,
 )
 
+logger = logging.getLogger(__name__)
 OBSIDIAN_DIR = get_config().obsidian_dir
 
 
@@ -38,6 +40,8 @@ def generate_report(
     risks: str = "",
     output_dir: str = None,
     use_jin10_quotes: bool = True,
+    yf_results: dict[str, dict] = None,
+    quotes: dict[str, Optional[float]] = None,
 ) -> str:
     """生成完整研报
 
@@ -52,6 +56,8 @@ def generate_report(
         risks: 风险提示
         output_dir: 输出目录（默认 Obsidian 研究分析）
         use_jin10_quotes: 是否拉取金十行情快照
+        yf_results: 预获取的 yfinance 数据（跳过网络请求）
+        quotes: 预获取的行情快照（跳过网络请求）
 
     Returns:
         文件绝对路径
@@ -76,23 +82,28 @@ def generate_report(
     period_start = start_date.strftime("%Y-%m-%d")
     period_end = end_date.strftime("%Y-%m-%d")
 
-    print(f"📡 拉取 Yahoo Finance 行情 ({len(tickers)} 个标的)...")
-    yf_results = fetch_yfinance_batch(tickers, start_date, end_date)
-    print(f"✅ {len(yf_results)}/{len(tickers)} 个标的取到数据")
+    # 数据获取 — 支持注入（跳过网络请求）
+    if yf_results is None:
+        logger.info("📡 拉取 Yahoo Finance 行情 (%d 个标的)...", len(tickers))
+        yf_results = fetch_yfinance_batch(tickers, start_date, end_date)
+        logger.info("✅ %d/%d 个标的取到数据", len(yf_results), len(tickers))
+    else:
+        logger.info("📡 使用注入的 yfinance 数据 (%d 个标的)", len(yf_results))
 
-    quotes = {}
-    if use_jin10_quotes:
-        print("📡 拉取金十MCP行情快照...")
+    if quotes is None and use_jin10_quotes:
+        logger.info("📡 拉取金十MCP行情快照...")
         try:
             quotes = fetch_report_quotes()
             valid = sum(1 for v in quotes.values() if v is not None)
-            print(f"✅ {valid}/{len(quotes)} 个行情取到数据")
+            logger.info("✅ %d/%d 个行情取到数据", valid, len(quotes))
         except Exception as e:
-            print(f"⚠️ 金十行情失败: {e}")
+            logger.warning("⚠️ 金十行情失败: %s", e)
             quotes = {}
+    elif quotes is None:
+        quotes = {}
 
     # 组装研报
-    print("📝 生成研报内容...")
+    logger.info("📝 生成研报内容...")
     sections = []
 
     # 导语
@@ -134,7 +145,7 @@ def generate_report(
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"✅ 研报已保存: {filepath}")
+    logger.info("✅ 研报已保存: %s", filepath)
     return filepath
 
 

@@ -1,10 +1,13 @@
 """板块扫描 — 滞涨标的筛选"""
 
+import logging
 from typing import Optional
 import pandas as pd
 
 from finlab.ashare.data import login, logout, fetch_history, StockData
 from finlab.core.config import get_config
+
+logger = logging.getLogger(__name__)
 
 # 板块和标的定义（从配置加载，默认值在 core/config.py）
 def _load_categories() -> dict[str, list[tuple[str, str]]]:
@@ -35,7 +38,7 @@ def scan_sectors(
 
     logged_in = login()
     if not logged_in:
-        print("Baostock login failed")
+        logger.error("Baostock login failed")
         return []
 
     results = []

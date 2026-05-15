@@ -1,7 +1,13 @@
 """CLI 入口"""
 
+import logging
 import typer
 from rich.console import Console
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+)
 
 app = typer.Typer(
     name="finlab",

@@ -1,9 +1,12 @@
 """标的追踪 — 止损止盈检查 + 量价异常预警"""
 
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
 from finlab.ashare.data import StockData
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -135,13 +138,13 @@ def track_stocks(
         for cfg in configs:
             sd = fetch_history(cfg.code, cfg.name, days=days)
             if sd is None:
-                print(f"{cfg.name}({cfg.code}) | ❌ 数据不足")
+                logger.warning("%s(%s) | 数据不足", cfg.name, cfg.code)
                 continue
 
             result = TrackResult(config=cfg, data=sd)
             result.alerts = _check_alerts(result)
             results.append(result)
-            print(str(result))
+            logger.info(str(result))
     finally:
         logout()
 
