@@ -4,11 +4,11 @@
 """
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
 
-import yfinance as yf
-
+from finlab.core import BJT
+from finlab.core.config import get_config
 from finlab.report.fetchers import (
     fetch_yfinance_batch,
     fetch_report_quotes,
@@ -24,10 +24,7 @@ from finlab.report.sections import (
     generate_investment_section,
 )
 
-BJT = timezone(timedelta(hours=8))
-OBSIDIAN_DIR = os.path.expanduser(
-    "/Users/wangjiayi/Documents/Obsidian Vault/研究分析"
-)
+OBSIDIAN_DIR = get_config().obsidian_dir
 
 
 def generate_report(

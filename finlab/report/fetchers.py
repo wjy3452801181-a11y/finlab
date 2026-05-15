@@ -1,20 +1,17 @@
 """研报模块 — 数据获取（Yahoo Finance + 金十MCP行情）"""
 
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 from typing import Optional
 
-BJT = timezone(timedelta(hours=8))
+from finlab.core import BJT
+from finlab.core.config import get_config
 
 # 研报默认覆盖的标的分组 (Yahoo Finance tickers)
-TICKER_GROUPS: dict[str, list[str]] = {
-    "大盘指数ETF": ["SPY", "QQQ"],
-    "美股行业ETF": ["XLK", "XLE", "XLF", "XLI", "XLV", "XLY", "XLI", "XLU", "XLB"],
-    "科技AI": ["NVDA", "GOOGL", "MSFT", "AMD", "INTC", "SMH"],
-    "大宗商品": ["GLD", "USO", "SLV"],
-    "债券/外汇": ["TLT", "UUP"],
-    "中国": ["FXI", "KWEB"],
-    "加密": ["BTC-USD", "ETH-USD"],
-}
+def _load_ticker_groups() -> dict[str, list[str]]:
+    return get_config().ticker_groups
+
+# 模块加载时解析一次
+TICKER_GROUPS: dict[str, list[str]] = _load_ticker_groups()
 
 
 def fetch_yfinance_batch(
@@ -80,22 +77,14 @@ def calc_weekly_change(data: dict[str, dict]) -> Optional[float]:
 
 
 def fetch_report_quotes() -> dict[str, Optional[float]]:
-    """获取当前行情快照（通过金十MCP）
+    """获取当前行情快照（通过金十MCP统一适配器）
 
     Returns:
         {品种代码: 最新价}
     """
-    import sys
-    import os
-    _p = os.path.expanduser("~/.hermes/scripts")
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-    from jin10_mcp_client import Jin10MCP
+    from finlab.core.jin10 import fetch_quotes
 
-    client = Jin10MCP()
-    client.initialize()
-
-    codes = {
+    return fetch_quotes({
         "上证": "000001",
         "深证": "399001",
         "创业板": "399006",
@@ -103,18 +92,7 @@ def fetch_report_quotes() -> dict[str, Optional[float]]:
         "原油": "USOIL",
         "欧元": "EURUSD",
         "美元指数": "USDX",
-    }
-    result = {}
-    for name, code in codes.items():
-        try:
-            q = client.get_quote(code)
-            if q:
-                result[name] = float(q.get("close", 0))
-            else:
-                result[name] = None
-        except Exception:
-            result[name] = None
-    return result
+    })
 
 
 def default_date_range() -> tuple[date, date]:

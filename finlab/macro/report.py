@@ -110,7 +110,7 @@ def generate_macro_summary(country: str = "us") -> str:
         if today_e:
             for e in today_e[:5]:
                 me = event_to_macro_event(e)
-                lines.append(f"  {me.indicator} | {me.time} | 预期{me.forecast} | {me.impact}({me.score}/10)")
+                lines.append(f"  {me.indicator} | {me.time} | 预期{me.forecast} | {me.direction}({me.score}/10)")
 
         tomorrow_str = (now + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         tom_e = [e for e in filter_high_impact_events(events) if str(e.get("Date", "")).startswith(tomorrow_str)]

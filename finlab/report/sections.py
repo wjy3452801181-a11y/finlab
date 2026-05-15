@@ -7,10 +7,10 @@
 4. 投资观点 — 具体标的建议+风险提示
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
 
-BJT = timezone(timedelta(hours=8))
+from finlab.core import BJT
 
 
 def generate_data_section(

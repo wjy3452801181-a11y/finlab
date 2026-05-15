@@ -4,6 +4,27 @@ from datetime import datetime
 
 
 @dataclass
+class Score:
+    """统一评分结果"""
+    value: int            # 1-10
+    direction: str = ""   # "利多" | "利空" | "中性"
+    reason: str = ""      # 人类可读理由
+
+    def as_label(self) -> str:
+        """格式化评分标签"""
+        if self.value >= 8:
+            return f"{self.value}/10 🚀 强烈利多"
+        elif self.value >= 6:
+            return f"{self.value}/10 ✅ 利好"
+        elif self.value >= 4:
+            return f"{self.value}/10 ⚖️ 中性"
+        elif self.value >= 2:
+            return f"{self.value}/10 🔴 利空"
+        else:
+            return f"{self.value}/10 ⚠️ 强烈利空"
+
+
+@dataclass
 class MacroEvent:
     """宏观事件数据模型"""
     time: str
@@ -12,8 +33,9 @@ class MacroEvent:
     actual: Optional[float] = None
     forecast: Optional[float] = None
     previous: Optional[float] = None
-    impact: str = ""  # 利多/利空/中性
     score: int = 5  # 1-10评分
+    direction: str = ""  # 利多/利空/中性
+    reason: str = ""     # 评分理由
 
 
 @dataclass

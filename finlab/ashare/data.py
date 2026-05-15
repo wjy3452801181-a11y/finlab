@@ -124,3 +124,26 @@ def fetch_history(
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     return StockData(code, name, df)
+
+
+# ── HistoricalSource 适配器 ─────────────────────────────
+
+class BaostockAdapter:
+    """Baostock 历史数据适配器 — 满足 core.sources.HistoricalSource 接口"""
+
+    def name(self) -> str:
+        return "baostock"
+
+    def available(self) -> bool:
+        return login()
+
+    def fetch(self, symbol: str, start: str, end: str) -> Optional["StockData"]:
+        """拉取历史日线（封装 login/logout）"""
+        from datetime import datetime
+        logged_in = login()
+        if not logged_in:
+            return None
+        try:
+            return fetch_history(symbol, name="", end_date=end)
+        finally:
+            logout()

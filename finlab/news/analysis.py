@@ -1,8 +1,5 @@
 """新闻模块 — 金融事件影响分析框架"""
 
-import re
-from typing import Optional
-
 from finlab.news.fetchers import search_flash, format_flash_item
 
 
@@ -91,73 +88,3 @@ def analyze_event(title: str, content: str = "") -> str:
         lines.append(f"  【详情摘要】{content[:200]}")
 
     return "\n".join(lines)
-
-
-def score_event(title: str, actual: str = "", forecast: str = "", previous: str = "") -> dict:
-    """对事件进行评分（适用于宏观数据发布场景）
-
-    Returns:
-        {"score": int, "direction": str, "reason": str}
-        评分 1-10：8-10🚀利多 6-7✅利好 4-5⚖️中性 2-3🔴利空 1⚠️强烈利空
-    """
-    categories = classify_event(title)
-    is_inflation = any("通胀" in c or "PPI" in title.upper() or "CPI" in title.upper()
-                       or "PCE" in title.upper() for c in categories)
-    is_growth = any("增长" in c or "GDP" in title.upper() or "零售" in title
-                    for c in categories)
-    is_jobs = any("就业" in c or "NFP" in title.upper() or "失业" in title
-                  or "初请" in title for c in categories)
-    is_fomc = any("货币政策" in c or "FOMC" in title.upper() for c in categories)
-
-    score = 5
-    direction = "中性"
-    reason = "暂无对比数据"
-
-    try:
-        if actual and forecast:
-            # 清理数值
-            a = float(actual.strip("%").strip("M").strip("K").replace(",", ""))
-            f = float(forecast.strip("%").strip("M").strip("K").replace(",", ""))
-            surprise = a - f
-
-            if is_inflation:
-                if surprise > 0:
-                    score = 3
-                    direction = "利空"
-                    reason = f"通胀高于预期 {surprise:+.2f}，紧缩预期强化"
-                else:
-                    score = 7
-                    direction = "利多"
-                    reason = f"通胀低于预期 {surprise:+.2f}，宽松预期强化"
-            elif is_growth:
-                if surprise > 0:
-                    score = 7
-                    direction = "利多"
-                    reason = f"增长强于预期 {surprise:+.2f}，经济韧性好"
-                else:
-                    score = 3
-                    direction = "利空"
-                    reason = f"增长弱于预期 {surprise:+.2f}，经济承压"
-            elif is_jobs:
-                if surprise > 0.3:
-                    score = 3
-                    direction = "利空"
-                    reason = f"就业超预期 {surprise:+.2f}，降息预期受挫"
-                elif surprise > 0:
-                    score = 5
-                    direction = "中性"
-                    reason = f"就业略超预期 {surprise:+.2f}，影响有限"
-                else:
-                    score = 6
-                    direction = "利好"
-                    reason = f"就业低于预期 {surprise:+.2f}，降息预期升温"
-            else:
-                score = 5
-                direction = "中性"
-                reason = f"实际 {a} vs 预期 {f}，影响需结合上下文"
-    except (ValueError, TypeError):
-        score = 5
-        direction = "中性"
-        reason = "无法解析数值，需结合文本判断"
-
-    return {"score": score, "direction": direction, "reason": reason}

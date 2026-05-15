@@ -1,8 +1,9 @@
 """新闻模块 — 快讯简报生成"""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 
+from finlab.core import BJT
 from finlab.news.fetchers import (
     fetch_flash,
     fetch_calendar,
@@ -12,9 +13,7 @@ from finlab.news.fetchers import (
     format_calendar_item,
     check_mcp_available,
 )
-from finlab.news.analysis import analyze_event, score_event
-
-BJT = timezone(timedelta(hours=8))
+from finlab.news.analysis import analyze_event
 
 
 def build_flash_brief(hours: int = 2, max_items: int = 20) -> str:
