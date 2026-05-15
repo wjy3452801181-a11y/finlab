@@ -4,11 +4,6 @@ import logging
 import typer
 from rich.console import Console
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-)
-
 app = typer.Typer(
     name="finlab",
     help="开源个人投行研究工具链",
@@ -20,6 +15,10 @@ console = Console()
 @app.callback()
 def callback():
     """finlab: 你的开源投行研究室"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
     pass
 
 
