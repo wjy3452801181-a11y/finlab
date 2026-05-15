@@ -1,7 +1,6 @@
 """新闻模块 — 快讯简报生成"""
 
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
 from finlab.core import BJT
 from finlab.news.fetchers import (

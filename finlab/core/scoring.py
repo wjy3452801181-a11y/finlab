@@ -68,7 +68,7 @@ def score_event(
 
     if rule is None:
         # 未匹配 → 默认规则：高于预期利多
-        direction, category = "利多", "其他"
+        category = "其他"
         if surprise > 0:
             return Score(
                 value=7, direction="利多",
@@ -124,7 +124,7 @@ def score_event(
                 reason=f"就业低于预期{surprise:+.2f}，降息预期升温"
             )
         else:
-            return Score(value=5, direction="中性", reason=f"就业符合预期")
+            return Score(value=5, direction="中性", reason="就业符合预期")
 
     if category == "失业":
         if surprise > 0:
@@ -138,7 +138,7 @@ def score_event(
                 reason=f"失业低于预期{surprise:+.2f}"
             )
         else:
-            return Score(value=5, direction="中性", reason=f"失业符合预期")
+            return Score(value=5, direction="中性", reason="失业符合预期")
 
     # 地产/信心 等 → 高于预期利多
     if surprise > 0:

@@ -11,7 +11,6 @@ class TestBJT:
 
     def test_bjt_now_is_reasonable(self):
         """BJT 时间应在 UTC+8 范围内"""
-        utc_now = datetime.now(datetime.utcnow().astimezone().tzinfo)  # type: ignore
         bjt_now = datetime.now(BJT)
         diff = (bjt_now.utcoffset() - timedelta(hours=8)).total_seconds()
         assert abs(diff) < 1

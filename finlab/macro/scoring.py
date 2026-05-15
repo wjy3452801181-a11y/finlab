@@ -20,7 +20,6 @@ def format_score(score: int) -> str:
 
 def event_to_macro_event(event: dict) -> MacroEvent:
     """将API返回的原始事件字典转换为 MacroEvent 数据模型"""
-    import datetime
     raw_date = event.get("Date", "")
     if "T" in raw_date:
         time_part = raw_date.split("T")[1][:5]

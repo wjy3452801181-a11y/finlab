@@ -1,5 +1,4 @@
 """测试统一评分引擎"""
-import pytest
 from finlab.core.scoring import score_event
 from finlab.core.models import Score
 

@@ -139,7 +139,6 @@ class BaostockAdapter:
 
     def fetch(self, symbol: str, start: str, end: str) -> Optional["StockData"]:
         """拉取历史日线（封装 login/logout）"""
-        from datetime import datetime
         logged_in = login()
         if not logged_in:
             return None

@@ -1,9 +1,7 @@
 """宏观数据报告生成器"""
 
 import datetime
-from typing import Optional
 
-from finlab.core.models import MacroEvent, MarketSnapshot
 from finlab.macro.fetchers import (
     fetch_economic_calendar,
     filter_high_impact_events,
@@ -78,8 +76,8 @@ def generate_macro_report(
                 lines.append(f"\n    {imp_label} {event_name}")
                 lines.append(f"      预期: {forecast} | 前值: {previous}")
     else:
-        lines.append(f"\n  ⚠️ 经济日历数据不可用 (API限制)")
-        lines.append(f"     尝试直接访问 TradingEconomics 或使用其他数据源")
+        lines.append("\n  ⚠️ 经济日历数据不可用 (API限制)")
+        lines.append("     尝试直接访问 TradingEconomics 或使用其他数据源")
 
     # 新闻
     if include_news:
@@ -115,7 +113,7 @@ def generate_macro_summary(country: str = "us") -> str:
         tomorrow_str = (now + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         tom_e = [e for e in filter_high_impact_events(events) if str(e.get("Date", "")).startswith(tomorrow_str)]
         if tom_e:
-            lines.append(f"  --- 明日 ---")
+            lines.append("  --- 明日 ---")
             for e in tom_e[:5]:
                 me = event_to_macro_event(e)
                 lines.append(f"  {me.indicator} | {me.time} | 预期{me.forecast}")

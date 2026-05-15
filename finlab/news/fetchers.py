@@ -1,10 +1,10 @@
 """新闻模块 — 实时快讯抓取（委托给 core.jin10 统一适配器）"""
 
 from finlab.core.jin10 import (
-    fetch_flash,
-    search_flash,
+    fetch_flash,  # noqa: F401 — re-export
+    search_flash,  # noqa: F401 — re-export
     fetch_calendar,
-    is_available as check_mcp_available,
+    is_available as check_mcp_available,  # noqa: F401 — re-export
 )
 
 

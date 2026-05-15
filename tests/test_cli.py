@@ -4,7 +4,6 @@
 mock 路径指向源模块（cli.py 的 import 在命令函数体内）。
 """
 
-import pytest
 from typer.testing import CliRunner
 from unittest import mock
 
@@ -62,7 +61,7 @@ class TestMacroCommands:
             m.assert_called_once_with(country="us")
 
     def test_macro_short_flags(self):
-        with mock.patch("finlab.macro.report.generate_macro_report") as m1:
+        with mock.patch("finlab.macro.report.generate_macro_report"):
             with mock.patch("finlab.macro.report.generate_macro_summary") as m2:
                 m2.return_value = ""
                 result = runner.invoke(app, ["macro", "-c", "jp", "-d", "1", "-s"])

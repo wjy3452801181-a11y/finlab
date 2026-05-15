@@ -2,7 +2,6 @@
 
 import logging
 from typing import Optional
-import pandas as pd
 
 from finlab.ashare.data import login, logout, fetch_history, StockData
 from finlab.core.config import get_config
@@ -94,7 +93,7 @@ def print_sector_scan(results: list[dict], top_n: int = 15):
         return
 
     print(f"\n{'='*80}")
-    print(f"A股板块扫描 — 筛选滞涨标的（今日未大涨+5日未提前抢跑）")
+    print("A股板块扫描 — 筛选滞涨标的（今日未大涨+5日未提前抢跑）")
     print(f"{'='*80}")
 
     # 按板块分组打印

@@ -5,17 +5,14 @@
 
 import logging
 import os
-from datetime import datetime, timedelta
 from typing import Optional
 
-from finlab.core import BJT
 from finlab.core.config import get_config
 from finlab.report.fetchers import (
     fetch_yfinance_batch,
     fetch_report_quotes,
     default_date_range,
     TICKER_GROUPS,
-    calc_weekly_change,
 )
 from finlab.report.sections import (
     generate_intro,

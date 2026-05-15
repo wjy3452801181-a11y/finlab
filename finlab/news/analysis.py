@@ -71,7 +71,7 @@ def analyze_event(title: str, content: str = "") -> str:
     lines.append(f"📊 事件分析：{title[:80]}")
     lines.append(f"  分类：{cat_str}")
     lines.append("")
-    lines.append(f"  【影响路径】")
+    lines.append("  【影响路径】")
     lines.append(cat_impact)
     lines.append("")
 

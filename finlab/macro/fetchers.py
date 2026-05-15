@@ -56,7 +56,6 @@ def filter_high_impact_events(events: list[dict], min_importance: int = 2) -> li
     Returns:
         筛选后的事件列表
     """
-    import re
     result = []
     for e in events:
         if "error" in e:

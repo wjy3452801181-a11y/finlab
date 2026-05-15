@@ -268,7 +268,7 @@ def report_generate(
             risks=risks or "",
         )
 
-    console.print(f"\n[green]✅ 研报已保存[/green]")
+    console.print("\n[green]✅ 研报已保存[/green]")
     console.print(f"[dim]{filepath}[/dim]")
 
 
@@ -282,7 +282,7 @@ def report_quick(
     with console.status("[bold cyan]📄 快速研报生成中..."):
         filepath = quick_report(title=title or "")
 
-    console.print(f"\n[green]✅ 研报已保存[/green]")
+    console.print("\n[green]✅ 研报已保存[/green]")
     console.print(f"[dim]{filepath}[/dim]")
 
 

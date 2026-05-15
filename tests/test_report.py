@@ -1,8 +1,7 @@
 """测试研报模块 — 数据注入缝"""
 import os
 import tempfile
-from unittest import mock
-from datetime import date, timedelta
+from datetime import date
 
 from finlab.report.generator import generate_report
 

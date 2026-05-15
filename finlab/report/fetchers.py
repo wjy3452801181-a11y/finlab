@@ -52,7 +52,7 @@ def fetch_yfinance_batch(
                     "volume": int(row["Volume"]),
                 }
             results[ticker] = data
-        except Exception as e:
+        except Exception:
             continue
     return results
 

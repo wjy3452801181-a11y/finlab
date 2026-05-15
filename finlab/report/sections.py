@@ -7,7 +7,7 @@
 4. 投资观点 — 具体标的建议+风险提示
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from finlab.core import BJT
@@ -32,7 +32,6 @@ def generate_data_section(
     """
     from finlab.report.fetchers import (
         TICKER_GROUPS,
-        calc_weekly_change,
         format_yfinance_table,
     )
 
