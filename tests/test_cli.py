@@ -39,53 +39,96 @@ class TestRootCommands:
 
 
 class TestMacroCommands:
+    def _mock_director(self, full_text="=== 宏观报告 ===", summary_text="【宏观预览】"):
+        """构建 MacroDirector mock 及其依赖的 fetcher mock"""
+        mock_director = mock.MagicMock()
+        mock_director.render_full_report.return_value = full_text
+        mock_director.render_summary.return_value = summary_text
+        return mock_director
+
     def test_macro_default(self):
-        with mock.patch("finlab.macro.report.generate_macro_report") as m:
-            m.return_value = "=== 宏观报告 ==="
+        with mock.patch("finlab.macro.fetchers.fetch_economic_calendar") as m_cal, \
+             mock.patch("finlab.macro.fetchers.fetch_forexlive_news") as m_news, \
+             mock.patch("finlab.core.jin10.fetch_flash") as m_flash, \
+             mock.patch("finlab.macro.director.MacroDirector") as m_director_cls:
+            m_cal.return_value = []
+            m_news.return_value = []
+            m_flash.return_value = []
+            mock_inst = self._mock_director()
+            m_director_cls.return_value = mock_inst
+
             result = runner.invoke(app, ["macro"])
             assert result.exit_code == 0
-            m.assert_called_once_with(country="us", days_ahead=2)
+            m_cal.assert_called_once_with(country="us", days_ahead=2)
+            m_director_cls.assert_called_once_with(events=[], news=[], flashes=[])
+            mock_inst.render_full_report.assert_called_once_with(country="us")
 
     def test_macro_with_country_and_days(self):
-        with mock.patch("finlab.macro.report.generate_macro_report") as m:
-            m.return_value = "=== CN 宏观 ==="
+        with mock.patch("finlab.macro.fetchers.fetch_economic_calendar") as m_cal, \
+             mock.patch("finlab.macro.fetchers.fetch_forexlive_news") as m_news, \
+             mock.patch("finlab.core.jin10.fetch_flash") as m_flash, \
+             mock.patch("finlab.macro.director.MacroDirector") as m_director_cls:
+            m_cal.return_value = []
+            m_news.return_value = []
+            m_flash.return_value = []
+            mock_inst = self._mock_director(full_text="=== CN 宏观 ===")
+            m_director_cls.return_value = mock_inst
+
             result = runner.invoke(app, ["macro", "--country", "cn", "--days", "5"])
             assert result.exit_code == 0
-            m.assert_called_once_with(country="cn", days_ahead=5)
+            m_cal.assert_called_once_with(country="cn", days_ahead=5)
 
     def test_macro_summary_mode(self):
-        with mock.patch("finlab.macro.report.generate_macro_summary") as m:
-            m.return_value = "【宏观预览】"
+        with mock.patch("finlab.macro.fetchers.fetch_economic_calendar") as m_cal, \
+             mock.patch("finlab.macro.fetchers.fetch_forexlive_news") as m_news, \
+             mock.patch("finlab.core.jin10.fetch_flash") as m_flash, \
+             mock.patch("finlab.macro.director.MacroDirector") as m_director_cls:
+            m_cal.return_value = []
+            m_news.return_value = []
+            m_flash.return_value = []
+            mock_inst = self._mock_director(summary_text="【宏观预览】")
+            m_director_cls.return_value = mock_inst
+
             result = runner.invoke(app, ["macro", "--summary"])
             assert result.exit_code == 0
-            m.assert_called_once_with(country="us")
+            m_cal.assert_called_once_with(country="us", days_ahead=2)
+            mock_inst.render_summary.assert_called_once_with(country="us")
+            mock_inst.render_full_report.assert_not_called()
 
     def test_macro_short_flags(self):
-        with mock.patch("finlab.macro.report.generate_macro_report"):
-            with mock.patch("finlab.macro.report.generate_macro_summary") as m2:
-                m2.return_value = ""
-                result = runner.invoke(app, ["macro", "-c", "jp", "-d", "1", "-s"])
-                assert result.exit_code == 0
-                m2.assert_called_once_with(country="jp")
+        with mock.patch("finlab.macro.fetchers.fetch_economic_calendar") as m_cal, \
+             mock.patch("finlab.macro.fetchers.fetch_forexlive_news") as m_news, \
+             mock.patch("finlab.core.jin10.fetch_flash") as m_flash, \
+             mock.patch("finlab.macro.director.MacroDirector") as m_director_cls:
+            m_cal.return_value = []
+            m_news.return_value = []
+            m_flash.return_value = []
+            mock_inst = self._mock_director(summary_text="")
+            m_director_cls.return_value = mock_inst
+
+            result = runner.invoke(app, ["macro", "-c", "jp", "-d", "1", "-s"])
+            assert result.exit_code == 0
+            m_cal.assert_called_once_with(country="jp", days_ahead=1)
+            mock_inst.render_summary.assert_called_once_with(country="jp")
 
 
 class TestNewsCommands:
     def test_flash_default(self):
-        with mock.patch("finlab.news.fetchers.fetch_flash") as m:
+        with mock.patch("finlab.core.jin10.fetch_flash") as m:
             m.return_value = [{"time": "14:30:00", "content": "test"}]
             result = runner.invoke(app, ["news", "flash"])
             assert result.exit_code == 0
             m.assert_called_once_with(hours=2)
 
     def test_flash_custom_hours(self):
-        with mock.patch("finlab.news.fetchers.fetch_flash") as m:
+        with mock.patch("finlab.core.jin10.fetch_flash") as m:
             m.return_value = []
             result = runner.invoke(app, ["news", "flash", "--hours", "6"])
             assert result.exit_code == 0
             m.assert_called_once_with(hours=6)
 
     def test_flash_empty(self):
-        with mock.patch("finlab.news.fetchers.fetch_flash") as m:
+        with mock.patch("finlab.core.jin10.fetch_flash") as m:
             m.return_value = []
             result = runner.invoke(app, ["news", "flash"])
             assert result.exit_code == 0
@@ -111,29 +154,43 @@ class TestNewsCommands:
             assert result.exit_code == 0
 
     def test_search(self):
-        with mock.patch("finlab.news.fetchers.search_flash") as m:
+        with mock.patch("finlab.core.jin10.search_flash") as m:
             m.return_value = [{"time": "14:30", "content": "tariff news"}]
             result = runner.invoke(app, ["news", "search", "tariff"])
             assert result.exit_code == 0
             m.assert_called_once_with("tariff")
 
     def test_search_no_results(self):
-        with mock.patch("finlab.news.fetchers.search_flash") as m:
+        with mock.patch("finlab.core.jin10.search_flash") as m:
             m.return_value = []
             result = runner.invoke(app, ["news", "search", "xyznotexist"])
             assert result.exit_code == 0
 
 
 class TestReportCommands:
+    @staticmethod
+    def _macro_director_mocks():
+        """Mock 构建 MacroDirector 所需的 4 个依赖"""
+        return (
+            mock.patch("finlab.macro.fetchers.fetch_economic_calendar", return_value=[]),
+            mock.patch("finlab.macro.fetchers.fetch_forexlive_news", return_value=[]),
+            mock.patch("finlab.core.jin10.fetch_flash", return_value=[]),
+            mock.patch("finlab.macro.director.MacroDirector"),
+        )
+
     def test_generate(self):
-        with mock.patch("finlab.report.generator.generate_report") as m:
+        m1, m2, m3, m4 = self._macro_director_mocks()
+        with m1, m2, m3, m4, \
+             mock.patch("finlab.report.generator.generate_report") as m:
             m.return_value = "/tmp/test_report.md"
             result = runner.invoke(app, ["report", "generate", "--title", "周报"])
             assert result.exit_code == 0
             assert "已保存" in result.stdout or "test_report" in result.stdout
 
     def test_generate_with_all_params(self):
-        with mock.patch("finlab.report.generator.generate_report") as m:
+        m1, m2, m3, m4 = self._macro_director_mocks()
+        with m1, m2, m3, m4, \
+             mock.patch("finlab.report.generator.generate_report") as m:
             m.return_value = "/tmp/full.md"
             result = runner.invoke(
                 app,
@@ -153,14 +210,17 @@ class TestReportCommands:
                 topic_desc="CPI超预期",
                 outlook="谨慎看多",
                 risks="关税风险",
+                macro_source=mock.ANY,
             )
 
     def test_quick(self):
-        with mock.patch("finlab.report.generator.quick_report") as m:
+        m1, m2, m3, m4 = self._macro_director_mocks()
+        with m1, m2, m3, m4, \
+             mock.patch("finlab.report.generator.quick_report") as m:
             m.return_value = "/tmp/quick.md"
             result = runner.invoke(app, ["report", "quick", "--title", "快速"])
             assert result.exit_code == 0
-            m.assert_called_once_with(title="快速")
+            m.assert_called_once_with(title="快速", macro_source=mock.ANY)
 
     def test_data(self):
         with mock.patch("finlab.report.sections.generate_data_section") as m_sec:
@@ -174,33 +234,130 @@ class TestReportCommands:
 
 
 class TestAshareCommands:
+    @staticmethod
+    def _mock_stock_data():
+        """构建一个 mock StockData，满足 SectorChief 最低要求"""
+        import pandas as pd
+        sd = mock.MagicMock()
+        sd.df = pd.DataFrame([
+            {"close": 38.0, "pctChg": 0.5, "volume": 1e7, "turn": 2.0},
+            {"close": 38.2, "pctChg": 0.8, "volume": 1.1e7, "turn": 2.1},
+            {"close": 38.5, "pctChg": 1.2, "volume": 1.2e7, "turn": 2.3},
+            {"close": 38.3, "pctChg": -0.5, "volume": 9e6, "turn": 1.8},
+        ])
+        return sd
+
     def test_track_default(self):
-        with mock.patch("finlab.ashare.tracker.track_stocks") as m:
-            m.return_value = []
+        mock_sd = self._mock_stock_data()
+        with mock.patch("finlab.ashare.data.login", return_value=True), \
+             mock.patch("finlab.ashare.data.logout"), \
+             mock.patch("finlab.ashare.data.fetch_history", return_value=mock_sd), \
+             mock.patch("finlab.ashare.chief.SectorChief") as m_chief:
+            mock_inst = mock.MagicMock()
+            mock_inst.render_tracking.return_value = "追踪结果"
+            m_chief.return_value = mock_inst
             result = runner.invoke(app, ["ashare", "track"])
-            # track_stocks 内部调用 baostock login，被 mock 后返回空列表
             assert result.exit_code == 0
+            mock_inst.render_tracking.assert_called_once()
 
     def test_track_with_days(self):
-        with mock.patch("finlab.ashare.tracker.track_stocks") as m:
-            m.return_value = []
+        mock_sd = self._mock_stock_data()
+        with mock.patch("finlab.ashare.data.login", return_value=True), \
+             mock.patch("finlab.ashare.data.logout"), \
+             mock.patch("finlab.ashare.data.fetch_history", return_value=mock_sd), \
+             mock.patch("finlab.ashare.chief.SectorChief") as m_chief:
+            mock_inst = mock.MagicMock()
+            mock_inst.render_tracking.return_value = "追踪结果"
+            m_chief.return_value = mock_inst
             result = runner.invoke(app, ["ashare", "track", "--days", "20"])
             assert result.exit_code == 0
 
     def test_scan_default(self):
-        with mock.patch("finlab.ashare.screener.scan_sectors") as m:
-            m.return_value = [{"板块": "芯片", "代码": "sh.688981", "名称": "中芯国际",
-                               "最新价": 50.0, "今日涨幅%": 1.5, "5日涨幅%": 3.0,
-                               "日均换手%": 2.0, "量比": 1.2}]
+        mock_sd = self._mock_stock_data()
+        with mock.patch("finlab.ashare.data.login", return_value=True), \
+             mock.patch("finlab.ashare.data.logout"), \
+             mock.patch("finlab.ashare.data.fetch_history", return_value=mock_sd), \
+             mock.patch("finlab.ashare.chief.SectorChief") as m_chief:
+            mock_inst = mock.MagicMock()
+            mock_inst.render_sector_scan.return_value = "板块扫描结果"
+            m_chief.return_value = mock_inst
             result = runner.invoke(app, ["ashare", "scan"])
             assert result.exit_code == 0
+            mock_inst.render_sector_scan.assert_called_once()
 
     def test_scan_with_exclude(self):
-        with mock.patch("finlab.ashare.screener.scan_sectors") as m:
-            m.return_value = []
+        mock_sd = self._mock_stock_data()
+        with mock.patch("finlab.ashare.data.login", return_value=True), \
+             mock.patch("finlab.ashare.data.logout"), \
+             mock.patch("finlab.ashare.data.fetch_history", return_value=mock_sd), \
+             mock.patch("finlab.ashare.chief.SectorChief") as m_chief:
+            mock_inst = mock.MagicMock()
+            mock_inst.render_sector_scan.return_value = "板块扫描结果"
+            m_chief.return_value = mock_inst
             result = runner.invoke(app, ["ashare", "scan", "--exclude", "金融,消费"])
-            m.assert_called_once_with(exclude=["金融", "消费"])
+            mock_inst.render_sector_scan.assert_called_once_with(exclude=["金融", "消费"])
             assert result.exit_code == 0
+
+    def test_rotation(self):
+        mock_sd = self._mock_stock_data()
+        with mock.patch("finlab.ashare.data.login", return_value=True), \
+             mock.patch("finlab.ashare.data.logout"), \
+             mock.patch("finlab.ashare.data.fetch_history", return_value=mock_sd), \
+             mock.patch("finlab.ashare.chief.SectorChief") as m_chief:
+            mock_inst = mock.MagicMock()
+            mock_inst.render_sector_rotation.return_value = "板块轮动评分"
+            m_chief.return_value = mock_inst
+            result = runner.invoke(app, ["ashare", "rotation"])
+            assert result.exit_code == 0
+            mock_inst.render_sector_rotation.assert_called_once()
+
+
+class TestTradeCommands:
+    """交易命令测试 — mock TradeExecutor + yfinance"""
+
+    def test_signal_default(self):
+        with mock.patch("finlab.cli._fetch_yfinance_batch") as m_fetch, \
+             mock.patch("finlab.trade.executor.TradeExecutor") as m_exec:
+            m_fetch.return_value = {"AAPL": mock.MagicMock()}
+            mock_inst = mock.MagicMock()
+            mock_inst.render_signal.return_value = "交易信号"
+            m_exec.return_value = mock_inst
+            result = runner.invoke(app, ["trade", "signal"])
+            assert result.exit_code == 0
+            mock_inst.render_signal.assert_called_once_with(symbol=None)
+
+    def test_signal_with_symbol(self):
+        with mock.patch("finlab.cli._fetch_yfinance_batch") as m_fetch, \
+             mock.patch("finlab.trade.executor.TradeExecutor") as m_exec:
+            m_fetch.return_value = {"NVDA": mock.MagicMock()}
+            mock_inst = mock.MagicMock()
+            mock_inst.render_signal.return_value = "NVDA信号"
+            m_exec.return_value = mock_inst
+            result = runner.invoke(app, ["trade", "signal", "--symbol", "NVDA"])
+            assert result.exit_code == 0
+            mock_inst.render_signal.assert_called_once_with(symbol="NVDA")
+
+    def test_monitor_default(self):
+        with mock.patch("finlab.cli._fetch_yfinance_batch") as m_fetch, \
+             mock.patch("finlab.trade.executor.TradeExecutor") as m_exec:
+            m_fetch.return_value = {"NVDA": mock.MagicMock(), "QQQ": mock.MagicMock()}
+            mock_inst = mock.MagicMock()
+            mock_inst.render_risk_check.return_value = "风险检查"
+            m_exec.return_value = mock_inst
+            result = runner.invoke(app, ["trade", "monitor"])
+            assert result.exit_code == 0
+            mock_inst.render_risk_check.assert_called_once()
+
+    def test_alpha(self):
+        with mock.patch("finlab.cli._fetch_yfinance_batch") as m_fetch, \
+             mock.patch("finlab.trade.executor.TradeExecutor") as m_exec:
+            m_fetch.return_value = {"SPY": mock.MagicMock()}
+            mock_inst = mock.MagicMock()
+            mock_inst.render_anti_consensus.return_value = "Alpha信号"
+            m_exec.return_value = mock_inst
+            result = runner.invoke(app, ["trade", "alpha"])
+            assert result.exit_code == 0
+            mock_inst.render_anti_consensus.assert_called_once()
 
 
 class TestHelpOutputs:
@@ -216,6 +373,10 @@ class TestHelpOutputs:
 
     def test_news_help(self):
         result = runner.invoke(app, ["news", "--help"])
+        assert result.exit_code == 0
+
+    def test_trade_help(self):
+        result = runner.invoke(app, ["trade", "--help"])
         assert result.exit_code == 0
 
     def test_report_help(self):

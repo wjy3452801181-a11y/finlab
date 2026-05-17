@@ -12,7 +12,7 @@ from finlab.report.fetchers import (
     fetch_yfinance_batch,
     fetch_report_quotes,
     default_date_range,
-    TICKER_GROUPS,
+    get_ticker_groups,
 )
 from finlab.report.sections import (
     generate_intro,
@@ -20,10 +20,10 @@ from finlab.report.sections import (
     generate_policy_section,
     generate_topic_section,
     generate_investment_section,
+    MacroSource,
 )
 
 logger = logging.getLogger(__name__)
-OBSIDIAN_DIR = get_config().obsidian_dir
 
 
 def generate_report(
@@ -39,6 +39,7 @@ def generate_report(
     use_jin10_quotes: bool = True,
     yf_results: dict[str, dict] = None,
     quotes: dict[str, Optional[float]] = None,
+    macro_source: MacroSource | None = None,
 ) -> str:
     """生成完整研报
 
@@ -55,6 +56,7 @@ def generate_report(
         use_jin10_quotes: 是否拉取金十行情快照
         yf_results: 预获取的 yfinance 数据（跳过网络请求）
         quotes: 预获取的行情快照（跳过网络请求）
+        macro_source: 宏观数据源（提供 impact + risk 章节给政策与新闻）
 
     Returns:
         文件绝对路径
@@ -67,7 +69,7 @@ def generate_report(
 
     if not tickers:
         tickers = []
-        for group_tickers in TICKER_GROUPS.values():
+        for group_tickers in get_ticker_groups().values():
             tickers.extend(group_tickers)
 
     if not title:
@@ -110,7 +112,7 @@ def generate_report(
     sections.append(generate_data_section(yf_results, quotes, period_start, period_end))
 
     # 第二章：政策与新闻
-    sections.append(generate_policy_section())
+    sections.append(generate_policy_section(macro_source=macro_source))
 
     # 第三章：专题分析
     sections.append(generate_topic_section(
@@ -133,7 +135,7 @@ def generate_report(
     content = "\n".join(sections)
 
     # 输出
-    output_path = output_dir or OBSIDIAN_DIR
+    output_path = output_dir or get_config().obsidian_dir
     os.makedirs(output_path, exist_ok=True)
 
     filename_slug = title.replace(" ", "_").replace("/", "_").replace(":", "_")
@@ -152,6 +154,7 @@ def quick_report(
     topic_desc: str = "",
     outlook: str = "",
     risks: str = "",
+    macro_source: MacroSource | None = None,
 ) -> str:
     """快速生成一份研报（默认最近7天 + 全标的数据）"""
     return generate_report(
@@ -160,4 +163,5 @@ def quick_report(
         topic_desc=topic_desc,
         outlook=outlook,
         risks=risks,
+        macro_source=macro_source,
     )

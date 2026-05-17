@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 
 
@@ -36,6 +38,36 @@ class MacroEvent:
     score: int = 5  # 1-10评分
     direction: str = ""  # 利多/利空/中性
     reason: str = ""     # 评分理由
+
+    @classmethod
+    def from_dict(cls, event: dict[str, Any]) -> MacroEvent:
+        """从 TradingEconomics API 原始字典构建（替代原 event_to_macro_event）"""
+        from finlab.core.scoring import score_event
+
+        raw_date = event.get("Date", "")
+        if "T" in raw_date:
+            time_part = raw_date.split("T")[1][:5]
+        else:
+            time_part = "全天"
+
+        event_name = event.get("Event", "N/A")
+        actual = str(event.get("Actual", "-"))
+        forecast = str(event.get("Forecast", "-"))
+        previous = str(event.get("Previous", "-"))
+
+        s = score_event(event_name, actual, forecast, previous)
+
+        return cls(
+            time=time_part,
+            country=event.get("Country", ""),
+            indicator=event_name,
+            actual=float(actual) if actual not in ("-", "") else None,
+            forecast=float(forecast) if forecast not in ("-", "") else None,
+            previous=float(previous) if previous not in ("-", "") else None,
+            score=s.value,
+            direction=s.direction,
+            reason=s.reason,
+        )
 
 
 @dataclass

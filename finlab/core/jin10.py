@@ -118,10 +118,32 @@ def fetch_quotes(codes: dict[str, str]) -> dict[str, Optional[float]]:
     return result
 
 
+# ── 格式化 ─────────────────────────────────────────────
+
+def format_flash_item(item: dict) -> str:
+    """格式化单条快讯"""
+    t = item.get("time", "")
+    content = item.get("content", "") or item.get("title", "")
+    return f"[{t}] {content}"
+
+
+def format_calendar_item(item: dict) -> str:
+    """格式化单条日历事件"""
+    star = "⭐" * min(int(item.get("star", 0)), 3)
+    pub = item.get("pub_time", "")
+    title = item.get("title", "")
+    prev = item.get("previous", "-")
+    cons = item.get("consensus", "-")
+    actual = item.get("actual", "-")
+    affect = item.get("affect_txt", "")
+    tag = f" [{affect}]" if affect else ""
+    return f"[{pub}] {star} {title}{tag}\n    前值:{prev} 预期:{cons} 实际:{actual}"
+
+
 # ── QuoteSource 适配器 ──────────────────────────────────
 
 class Jin10QuoteAdapter:
-    """金十行情适配器 — 满足 core.sources.QuoteSource 接口"""
+    """金十行情适配器 — 提供实时报价查询"""
 
     def name(self) -> str:
         return "jin10"

@@ -82,7 +82,7 @@ def about():
         "│   ├── core/            数据模型 + 数据源抽象层\n"
         "│   ├── macro/           宏观模块\n"
         "│   ├── ashare/          A股模块\n"
-        "│   ├── crypto/          加密模块\n"
+        "│   ├── trade/           交易模块\n"
         "│   ├── news/            新闻模块\n"
         "│   └── report/          研报模块\n"
         "├── tests/\n"
@@ -101,13 +101,23 @@ def macro(
     summary: bool = typer.Option(False, "--summary", "-s", help="精简模式（适合推送）"),
 ):
     """宏观数据拉取与评分"""
-    from finlab.macro.report import generate_macro_report, generate_macro_summary
+    from finlab.macro.fetchers import fetch_economic_calendar, fetch_forexlive_news
+    from finlab.macro.director import MacroDirector
 
     with console.status("[bold yellow]📊 抓取宏观数据..."):
+        events = fetch_economic_calendar(country=country, days_ahead=days)
+        news = fetch_forexlive_news()
+        # JIN10 MCP 实时快讯（容错：MCP 不可用时跳过）
+        try:
+            from finlab.core.jin10 import fetch_flash
+            flashes = fetch_flash(hours=2)
+        except Exception:
+            flashes = []
+        director = MacroDirector(events=events, news=news, flashes=flashes)
         if summary:
-            text = generate_macro_summary(country=country)
+            text = director.render_summary(country=country)
         else:
-            text = generate_macro_report(country=country, days_ahead=days)
+            text = director.render_full_report(country=country)
     console.print(text)
 
 
@@ -122,7 +132,9 @@ def ashare_track(
     custom: str = typer.Option(None, "--custom", help='JSON自定义标的: {"sz.000063": {"name":"中兴通讯","entry":38.09,"stop":36.50,"target1":39.50}}'),
 ):
     """跟踪持仓标的：止损止盈检查 + 量价预警"""
-    from finlab.ashare.tracker import TrackConfig, track_stocks, print_summary
+    from finlab.ashare.tracker import TrackConfig
+    from finlab.ashare.data import login, logout, fetch_history
+    from finlab.ashare.chief import SectorChief
 
     if custom:
         import json
@@ -140,10 +152,20 @@ def ashare_track(
         ]
 
     with console.status("[bold green]🇨🇳 拉取A股数据..."):
-        results = track_stocks(configs, days=days)
+        stock_data = {}
+        logged_in = login()
+        try:
+            if logged_in:
+                for cfg in configs:
+                    sd = fetch_history(cfg.code, cfg.name, days=days)
+                    if sd:
+                        stock_data[cfg.code] = sd
+        finally:
+            logout()
 
-    if results:
-        print_summary(results)
+    chief = SectorChief(stock_data=stock_data, categories={})
+    text = chief.render_tracking(configs)
+    console.print(text)
 
 
 @ashare_app.command(name="scan")
@@ -151,15 +173,160 @@ def ashare_scan(
     exclude: str = typer.Option(None, "--exclude", help="排除板块（逗号分隔）"),
 ):
     """板块扫描：寻找滞涨标的"""
-    from finlab.ashare.screener import scan_sectors, print_sector_scan
+    from finlab.ashare.data import login, logout, fetch_history
+    from finlab.ashare.chief import SectorChief
+    from finlab.core.config import get_config
 
     exclude_list = [e.strip() for e in exclude.split(",")] if exclude else []
+    categories = get_config().sectors
 
     with console.status("[bold green]🇨🇳 扫描A股板块..."):
-        results = scan_sectors(exclude=exclude_list)
+        stock_data = {}
+        logged_in = login()
+        try:
+            if logged_in:
+                for cat_name, stocks in categories.items():
+                    if cat_name in exclude_list:
+                        continue
+                    for code, name in stocks:
+                        sd = fetch_history(code, name, days=7)
+                        if sd:
+                            stock_data[code] = sd
+        finally:
+            logout()
 
-    if results:
-        print_sector_scan(results)
+    chief = SectorChief(stock_data=stock_data, categories=categories)
+    text = chief.render_sector_scan(exclude=exclude_list)
+    console.print(text)
+
+
+@ashare_app.command(name="rotation")
+def ashare_rotation():
+    """板块轮动：按动量/量能/活跃度/宽度综合评分排名"""
+    from finlab.ashare.data import login, logout, fetch_history
+    from finlab.ashare.chief import SectorChief
+    from finlab.core.config import get_config
+
+    categories = get_config().sectors
+
+    with console.status("[bold green]🇨🇳 拉取A股板块数据..."):
+        stock_data = {}
+        logged_in = login()
+        try:
+            if logged_in:
+                for cat_name, stocks in categories.items():
+                    for code, name in stocks:
+                        sd = fetch_history(code, name, days=7)
+                        if sd:
+                            stock_data[code] = sd
+        finally:
+            logout()
+
+    chief = SectorChief(stock_data=stock_data, categories=categories)
+    text = chief.render_sector_rotation()
+    console.print(text)
+
+
+# ── trade ──────────────────────────────────────────────
+trade_app = typer.Typer(help="交易信号 + 风险管理 + 反共识Alpha")
+app.add_typer(trade_app, name="trade")
+
+
+@trade_app.command(name="signal")
+def trade_signal(
+    symbol: str = typer.Option(None, "--symbol", "-s", help="标的代码（不传=扫描预设标的）"),
+    days: int = typer.Option(60, "--days", "-d", help="回溯天数"),
+):
+    """入场信号综合评分：趋势/动量/量价/波动四维评分"""
+    from finlab.trade.executor import TradeExecutor
+
+    tickers = [symbol] if symbol else _default_trade_tickers()
+    price_data = _fetch_yfinance_batch(tickers, days)
+
+    executor = TradeExecutor(price_data=price_data)
+    text = executor.render_signal(symbol=symbol)
+    console.print(text)
+
+
+@trade_app.command(name="monitor")
+def trade_monitor(
+    custom: str = typer.Option(None, "--custom", help='JSON持仓: [{"symbol":"AAPL","name":"苹果","entry":180,"stop":170,"target":200}]'),
+    days: int = typer.Option(60, "--days", "-d", help="回溯天数"),
+):
+    """持仓风险管理：止损止盈检查 + 动态止损建议"""
+    from finlab.trade.executor import TradeExecutor
+
+    if custom:
+        import json
+        watchlist = json.loads(custom)
+    else:
+        watchlist = _default_watchlist()
+
+    symbols = list({p["symbol"] for p in watchlist})
+    price_data = _fetch_yfinance_batch(symbols, days)
+
+    executor = TradeExecutor(price_data=price_data, watchlist=watchlist)
+    text = executor.render_risk_check()
+    console.print(text)
+
+
+@trade_app.command(name="alpha")
+def trade_alpha(
+    days: int = typer.Option(60, "--days", "-d", help="回溯天数"),
+):
+    """反共识Alpha：恐慌抛售/缩量止跌/波动压缩/RSI背离"""
+    from finlab.trade.executor import TradeExecutor
+
+    tickers = _default_trade_tickers()
+    price_data = _fetch_yfinance_batch(tickers, days)
+
+    executor = TradeExecutor(price_data=price_data)
+    text = executor.render_anti_consensus()
+    console.print(text)
+
+
+def _default_trade_tickers() -> list[str]:
+    """预设交易标的（美股科技 + ETF）"""
+    return [
+        "NVDA", "AMD", "MSFT", "GOOGL", "AAPL", "META",
+        "SMH", "QQQ", "SPY", "TLT", "GLD", "XLK", "XLE",
+    ]
+
+
+def _default_watchlist() -> list[dict]:
+    """预设示例持仓"""
+    return [
+        {"symbol": "NVDA", "name": "英伟达", "entry": 180, "stop": 165, "target": 210},
+        {"symbol": "QQQ", "name": "纳指ETF", "entry": 520, "stop": 490, "target": 560},
+    ]
+
+
+def _fetch_yfinance_batch(tickers: list[str], days: int) -> dict:
+    """批量拉取 yfinance 日线数据"""
+    import yfinance as yf
+    import pandas as pd
+
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(days=days + 10)
+
+    data = {}
+    for tkr in tickers:
+        try:
+            df = yf.download(tkr, start=start, end=end, progress=False, auto_adjust=True)
+            if df is None or len(df) < 26:
+                continue
+            # Flatten MultiIndex columns: ('Close', 'AAPL') → 'Close'
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            df = df.rename(columns={
+                "Open": "open", "High": "high", "Low": "low",
+                "Close": "close", "Volume": "volume",
+            })
+            df = df[["open", "high", "low", "close", "volume"]]
+            data[tkr] = df
+        except Exception:
+            pass
+    return data
 
 
 # ── news ────────────────────────────────────────────────
@@ -170,7 +337,7 @@ app.add_typer(news_app, name="news")
 @news_app.command(name="flash")
 def news_flash(hours: int = typer.Option(2, "--hours", "-h", help="最近几小时")):
     """获取金十实时快讯"""
-    from finlab.news.fetchers import fetch_flash, format_flash_item
+    from finlab.core.jin10 import fetch_flash, format_flash_item
 
     with console.status("[bold yellow]📰 获取快讯..."):
         items = fetch_flash(hours=hours)
@@ -214,7 +381,7 @@ def news_brief():
 @news_app.command(name="search")
 def news_search(keyword: str = typer.Argument(..., help="搜索关键词")):
     """搜索金十快讯"""
-    from finlab.news.fetchers import search_flash, format_flash_item
+    from finlab.core.jin10 import search_flash, format_flash_item
 
     with console.status(f"[bold yellow]🔍 搜索: {keyword}..."):
         items = search_flash(keyword)
@@ -248,6 +415,21 @@ report_app = typer.Typer(help="一键生成研报")
 app.add_typer(report_app, name="report")
 
 
+def _build_macro_director():
+    """构建 MacroDirector，容错所有数据源"""
+    from finlab.macro.fetchers import fetch_economic_calendar, fetch_forexlive_news
+    from finlab.macro.director import MacroDirector
+
+    events = fetch_economic_calendar()
+    news = fetch_forexlive_news()
+    try:
+        from finlab.core.jin10 import fetch_flash
+        flashes = fetch_flash(hours=2)
+    except Exception:
+        flashes = []
+    return MacroDirector(events=events, news=news, flashes=flashes)
+
+
 @report_app.command(name="generate")
 def report_generate(
     title: str = typer.Option("", "--title", "-t", help="研报标题"),
@@ -260,12 +442,14 @@ def report_generate(
     from finlab.report.generator import generate_report
 
     with console.status("[bold cyan]📄 生成研报中..."):
+        director = _build_macro_director()
         filepath = generate_report(
             title=title or "",
             topic_title=topic or "",
             topic_desc=desc or "",
             outlook=outlook or "",
             risks=risks or "",
+            macro_source=director,
         )
 
     console.print("\n[green]✅ 研报已保存[/green]")
@@ -280,7 +464,8 @@ def report_quick(
     from finlab.report.generator import quick_report
 
     with console.status("[bold cyan]📄 快速研报生成中..."):
-        filepath = quick_report(title=title or "")
+        director = _build_macro_director()
+        filepath = quick_report(title=title or "", macro_source=director)
 
     console.print("\n[green]✅ 研报已保存[/green]")
     console.print(f"[dim]{filepath}[/dim]")
@@ -291,13 +476,13 @@ def report_data():
     """仅生成数据章节（行情表格）"""
     from finlab.report.fetchers import (
         fetch_yfinance_batch, fetch_report_quotes,
-        TICKER_GROUPS, default_date_range,
+        get_ticker_groups, default_date_range,
     )
     from finlab.report.sections import generate_data_section
 
     start, end = default_date_range()
     tickers = []
-    for gt in TICKER_GROUPS.values():
+    for gt in get_ticker_groups().values():
         tickers.extend(gt)
 
     with console.status("[bold cyan]📡 拉取行情数据..."):

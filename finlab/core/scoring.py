@@ -6,24 +6,13 @@
 
 from finlab.core.models import Score
 
-# 指标分类规则表（集中维护，增删改一处生效）
-_RULES: list[tuple[tuple[str, ...], str, str]] = [
-    # (关键词元组, surprise>0方向, 分类标签)
-    # 注意：失业规则必须在就业之前，"Unemployment" 包含 "Employment"
-    (("Jobless", "Unemployment", "初请", "失业"), "利空", "失业"),
-    (("PPI", "CPI", "PCE", "核心CPI", "核心PCE"), "利空", "通胀"),
-    (("GDP", "Retail Sales", "零售", "工业产出", "制造业", "耐用品", "消费者信心"), "利多", "增长"),
-    (("NFP", "非农", "Payrolls", "Employment", "就业人口", "ADP", "JOLTS"), "中性", "就业"),
-    (("Housing", "Home Sales", "Sentiment"), "利多", "地产/信心"),
-]
-
 
 def _classify(event_name: str) -> tuple[str, str] | None:
     """根据事件名匹配指标分类，返回 (surprise_up_direction, category_label) 或 None"""
-    for keywords, direction, label in _RULES:
-        for kw in keywords:
-            if kw.lower() in event_name.lower():
-                return direction, label
+    from finlab.core.vocabulary import _match
+    matched = _match(event_name)
+    if matched and matched.scoring_category and matched.scoring_surprise_up:
+        return matched.scoring_surprise_up, matched.scoring_category
     return None
 
 

@@ -3,16 +3,21 @@
 from datetime import datetime
 
 from finlab.core import BJT
-from finlab.news.fetchers import (
+from finlab.core.jin10 import (
     fetch_flash,
     fetch_calendar,
-    fetch_high_impact_calendar,
     search_flash,
     format_flash_item,
     format_calendar_item,
-    check_mcp_available,
+    is_available as check_mcp_available,
 )
 from finlab.news.analysis import analyze_event
+
+
+def fetch_high_impact_calendar(min_star: int = 3) -> list[dict]:
+    """获取高重要性财经事件"""
+    cal = fetch_calendar()
+    return [e for e in cal if int(e.get("star", 0)) >= min_star]
 
 
 def build_flash_brief(hours: int = 2, max_items: int = 20) -> str:
@@ -147,31 +152,23 @@ def build_search_brief(keyword: str) -> str:
 
 def _guess_category(content: str) -> str:
     """根据内容猜测快讯分类"""
+    from finlab.core.vocabulary import brief_categories
+
     content_lower = content.lower()
-    cat_map = [
-        ("行情", any(x in content_lower for x in ["上涨", "下跌", "涨幅", "跌幅", "收盘", "开盘"])),
-        ("宏观", any(x in content_lower for x in ["CPI", "PPI", "GDP", "PMI", "就业", "失业", "通胀"])),
-        ("央行动态", any(x in content_lower for x in ["美联储", "加息", "降息", "利率", "央行"])),
-        ("地缘", any(x in content_lower for x in ["关税", "制裁", "谈判", "冲突", "战争"])),
-        ("行业", any(x in content_lower for x in ["芯片", "新能源", "汽车", "医药", "AI", "算力"])),
-        ("公司", any(x in content_lower for x in ["财报", "营收", "利润", "并购", "上市"])),
-    ]
-    for name, match in cat_map:
-        if match:
+    for name, keywords in brief_categories():
+        if any(kw.lower() in content_lower for kw in keywords):
             return name
     return "综合"
 
 
 def _extract_high_impact(items: list[dict]) -> list[str]:
     """从快讯中提取高影响力事件"""
+    from finlab.core.vocabulary import flash_trigger_words
+
     highlights = []
+    trigger_words = flash_trigger_words()
     for item in items:
         content = item.get("content", "") or item.get("title", "")
-        # 匹配重要关键词
-        trigger_words = [
-            "突发", "紧急", "重大", "央行", "加息", "降息", "利率决议",
-            "CPI", "PPI", "非农", "FOMC", "关税", "制裁",
-        ]
         if any(w in content for w in trigger_words):
             highlights.append(format_flash_item(item))
     return highlights[:5]

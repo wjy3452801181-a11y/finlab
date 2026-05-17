@@ -8,9 +8,21 @@
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Protocol, runtime_checkable
 
 from finlab.core import BJT
+
+
+@runtime_checkable
+class MacroSource(Protocol):
+    """宏观数据源协议 — report 模块定义的接口
+
+    MacroDirector 自然满足此协议，但 report 不依赖 macro。
+    测试可传入任意满足此协议的对象。
+    """
+
+    def render_impact_section(self, country: str = "us") -> str: ...
+    def render_risk_section(self, country: str = "us") -> str: ...
 
 
 def generate_data_section(
@@ -31,7 +43,7 @@ def generate_data_section(
         Markdown 章节内容
     """
     from finlab.report.fetchers import (
-        TICKER_GROUPS,
+        get_ticker_groups,
         format_yfinance_table,
     )
 
@@ -53,7 +65,7 @@ def generate_data_section(
     # 按分组输出表格
     # 把 yf_results 按分组归类
     ticker_to_group = {}
-    for group, tickers in TICKER_GROUPS.items():
+    for group, tickers in get_ticker_groups().items():
         for t in tickers:
             ticker_to_group[t] = group
 
@@ -72,11 +84,15 @@ def generate_data_section(
     return "\n".join(lines)
 
 
-def generate_policy_section(flash_items: list[dict] = None) -> str:
+def generate_policy_section(
+    flash_items: list[dict] = None,
+    macro_source: MacroSource | None = None,
+) -> str:
     """生成第二章：政策与新闻
 
     Args:
-        flash_items: 金十快讯列表（可选）
+        flash_items: 金十快讯列表（可选，向后兼容）
+        macro_source: 宏观数据源（可选），提供 impact + risk 章节
 
     Returns:
         Markdown 章节内容
@@ -85,25 +101,41 @@ def generate_policy_section(flash_items: list[dict] = None) -> str:
     lines.append("## 二、政策与新闻")
     lines.append("")
 
-    if not flash_items:
-        lines.append("> 待补充 — 请通过 `finlab report fetch-news` 获取本周快讯")
-        lines.append("")
-        return "\n".join(lines)
+    has_content = False
 
-    # 按日期分组
-    from collections import defaultdict
-    by_date: dict[str, list[dict]] = defaultdict(list)
-    for item in flash_items:
-        time_str = item.get("time", "")
-        dt = time_str[:10] if len(time_str) >= 10 else time_str[:8]
-        by_date[dt].append(item)
+    # 宏观总监提供的影响评估和风险提示
+    if macro_source is not None:
+        impact = macro_source.render_impact_section()
+        if impact:
+            lines.append(impact)
+            has_content = True
 
-    for date_str in sorted(by_date.keys(), reverse=True):
-        lines.append(f"### {date_str}")
-        for item in by_date[date_str]:
-            t = item.get("time", "")
-            content = item.get("content", "") or item.get("title", "")
-            lines.append(f"- [{t}] {content[:150]}")
+        risk = macro_source.render_risk_section()
+        if risk:
+            lines.append(risk)
+            has_content = True
+
+    # 向后兼容：快讯列表
+    if flash_items:
+        lines.append("### 本周快讯")
+        from collections import defaultdict
+        by_date: dict[str, list[dict]] = defaultdict(list)
+        for item in flash_items:
+            time_str = item.get("time", "")
+            dt = time_str[:10] if len(time_str) >= 10 else time_str[:8]
+            by_date[dt].append(item)
+
+        for date_str in sorted(by_date.keys(), reverse=True):
+            lines.append(f"#### {date_str}")
+            for item in by_date[date_str]:
+                t = item.get("time", "")
+                content = item.get("content", "") or item.get("title", "")
+                lines.append(f"- [{t}] {content[:150]}")
+            lines.append("")
+        has_content = True
+
+    if not has_content:
+        lines.append("> 待补充 — 请通过 `finlab macro` 获取宏观数据")
         lines.append("")
 
     return "\n".join(lines)

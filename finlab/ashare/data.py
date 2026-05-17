@@ -129,7 +129,7 @@ def fetch_history(
 # ── HistoricalSource 适配器 ─────────────────────────────
 
 class BaostockAdapter:
-    """Baostock 历史数据适配器 — 满足 core.sources.HistoricalSource 接口"""
+    """Baostock 历史数据适配器 — 提供 A 股历史日线数据"""
 
     def name(self) -> str:
         return "baostock"

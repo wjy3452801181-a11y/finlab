@@ -1,17 +1,24 @@
 """研报模块 — 数据获取（Yahoo Finance + 金十MCP行情）"""
 
+import logging
 from datetime import datetime, timedelta, date
 from typing import Optional
 
 from finlab.core import BJT
 from finlab.core.config import get_config
 
-# 研报默认覆盖的标的分组 (Yahoo Finance tickers)
-def _load_ticker_groups() -> dict[str, list[str]]:
-    return get_config().ticker_groups
+logger = logging.getLogger(__name__)
 
-# 模块加载时解析一次
-TICKER_GROUPS: dict[str, list[str]] = _load_ticker_groups()
+# 研报默认覆盖的标的分组 (Yahoo Finance tickers)
+# 延迟加载，避免 import 时读取磁盘配置
+_TICKER_GROUPS_CACHE: dict[str, list[str]] | None = None
+
+
+def get_ticker_groups() -> dict[str, list[str]]:
+    global _TICKER_GROUPS_CACHE
+    if _TICKER_GROUPS_CACHE is None:
+        _TICKER_GROUPS_CACHE = get_config().ticker_groups
+    return _TICKER_GROUPS_CACHE
 
 
 def fetch_yfinance_batch(
@@ -53,6 +60,7 @@ def fetch_yfinance_batch(
                 }
             results[ticker] = data
         except Exception:
+            logger.warning("yfinance 获取失败: %s", ticker)
             continue
     return results
 

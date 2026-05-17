@@ -1,27 +1,12 @@
 """新闻模块 — 金融事件影响分析框架"""
 
-from finlab.news.fetchers import search_flash, format_flash_item
+from finlab.core.jin10 import search_flash, format_flash_item
+from finlab.core.vocabulary import event_categories, default_score_map
 
 
-# 事件分类 + 与评分规则的映射
-EVENT_CATEGORIES = {
-    "通胀": ["PPI", "CPI", "PCE", "核心CPI", "核心PCE", "居民消费价格", "生产者价格"],
-    "就业": ["NFP", "非农", "失业", "初请", "JOLTS", "ADP", "就业人口"],
-    "增长": ["GDP", "零售", "工业产出", "制造业", "耐用品", "消费者信心"],
-    "货币政策": ["FOMC", "利率", "降息", "加息", "鲍威尔", "美联储", "央行"],
-    "地缘/贸易": ["关税", "制裁", "谈判", "协议", "冲突", "战争", "停火"],
-    "行业/公司": ["财报", "营收", "净利润", "订单", "产能"],
-}
-
-# 评分默认规则（通胀越高越利多BTC，越高越利空A股等要看上下文）
-DEFAULT_SCORE_MAP = {
-    "通胀": ("利空", "紧缩预期强化"),
-    "就业": ("中性", "劳动力市场韧性"),
-    "增长": ("利多", "经济韧性强劲"),
-    "货币政策": ("多空分歧", "取决于具体决策方向"),
-    "地缘/贸易": ("利空", "不确定性上升"),
-    "行业/公司": ("中性", "需结合个股基本面"),
-}
+# 事件分类 + 与评分规则的映射（从 vocabulary 派生）
+EVENT_CATEGORIES = event_categories()
+DEFAULT_SCORE_MAP = default_score_map()
 
 
 def classify_event(title: str) -> list[str]:

@@ -1,18 +1,19 @@
 """宏观数据抓取器 — 各国宏观经济指标"""
 
+import logging
 import httpx
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 TE_API_URL = "https://api.tradingeconomics.com/calendar"
 
-# 关注的宏观事件关键词
-WATCHED_EVENTS = [
-    "PPI", "CPI", "PCE", "GDP", "NFP", "FOMC", "ISM", "Retail Sales",
-    "Consumer Sentiment", "Initial Jobless", "Durable Goods",
-    "Factory Orders", "Industrial Production", "Housing Starts",
-    "New Home Sales", "Existing Home Sales", "Conference Board",
-    "Beige Book", "Nonfarm Payrolls", "Employment", "Unemployment",
-]
+# 关注的宏观事件关键词（从 vocabulary 派生）
+def _get_watched_events() -> list[str]:
+    from finlab.core.vocabulary import watched_keywords
+    return watched_keywords()
+
+WATCHED_EVENTS = _get_watched_events()
 
 
 def fetch_economic_calendar(
@@ -43,7 +44,8 @@ def fetch_economic_calendar(
             resp.raise_for_status()
             return resp.json()
     except Exception as e:
-        return [{"error": f"获取经济日历失败: {e}"}]
+        logger.warning("获取经济日历失败 (country=%s, days_ahead=%s): %s", country, days_ahead, e)
+        return []
 
 
 def filter_high_impact_events(events: list[dict], min_importance: int = 2) -> list[dict]:
@@ -58,8 +60,6 @@ def filter_high_impact_events(events: list[dict], min_importance: int = 2) -> li
     """
     result = []
     for e in events:
-        if "error" in e:
-            continue
         imp = e.get("Importance", 1)
         name = e.get("Event", "")
         # 高重要性或匹配关注关键词
@@ -90,5 +90,6 @@ def fetch_forexlive_news(limit: int = 20, timeout: float = 10.0) -> list[dict]:
             if title:
                 items.append({"title": title.strip(), "pubdate": pubdate[0] if pubdate else ""})
         return items
-    except Exception:
+    except Exception as e:
+        logger.warning("获取 ForexLive 新闻失败: %s", e)
         return []

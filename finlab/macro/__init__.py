@@ -6,24 +6,12 @@ from finlab.macro.fetchers import (
     fetch_forexlive_news,
     WATCHED_EVENTS,
 )
-from finlab.macro.scoring import (
-    calc_impact_score,
-    format_score,
-    event_to_macro_event,
-)
-from finlab.macro.report import (
-    generate_macro_report,
-    generate_macro_summary,
-)
+from finlab.macro.director import MacroDirector
 
 __all__ = [
     "fetch_economic_calendar",
     "filter_high_impact_events",
     "fetch_forexlive_news",
-    "calc_impact_score",
-    "format_score",
-    "event_to_macro_event",
-    "generate_macro_report",
-    "generate_macro_summary",
+    "MacroDirector",
     "WATCHED_EVENTS",
 ]
